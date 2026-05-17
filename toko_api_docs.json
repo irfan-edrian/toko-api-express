@@ -1,0 +1,53 @@
+{
+	"info": {
+		"name": "API Toko Transaksi Penjualan - Muhammad Irfan Edrian",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Data Master - Get All Pelanggan",
+			"request": {
+				"method": "GET",
+				"url": { "raw": "http://localhost:3000/api/pelanggan" }
+			}
+		},
+		{
+			"name": "Data Master - Create Pelanggan",
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"nama_pelanggan\": \"Irfan Baru\",\n    \"email\": \"irfan@express.com\"\n}"
+				},
+				"url": { "raw": "http://localhost:3000/api/pelanggan" }
+			}
+		},
+		{
+			"name": "Data Transaksional - Get All Transaksi",
+			"request": {
+				"method": "GET",
+				"url": { "raw": "http://localhost:3000/api/transaksi" }
+			}
+		},
+		{
+			"name": "Data Transaksional - Create Transaksi Baru",
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"id_pelanggan\": 1,\n    \"id_produk\": 2,\n    \"jumlah\": 2,\n    \"subtotal\": 120000\n}"
+				},
+				"url": { "raw": "http://localhost:3000/api/transaksi" }
+			}
+		},
+		{
+			"name": "Statistik - Get Data Ringkasan",
+			"request": {
+				"method": "GET",
+				"url": { "raw": "http://localhost:3000/api/statistik" }
+			}
+		}
+	]
+}
