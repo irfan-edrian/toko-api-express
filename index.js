@@ -1,87 +1,135 @@
 const express = require('express');
 const mysql = require('mysql2');
+const crypto = require('crypto'); // Bawaan Node.js untuk bikin token acak
 const app = express();
 const port = 3000;
 
-// Middleware agar Express bisa membaca input format JSON di Body Postman
 app.use(express.json());
 
-// Konfigurasi koneksi ke MySQL XAMPP (Sudah pas dengan database toko_transaksi)
+// 1. KONEKSI DATABASE XAMPP
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
     password: '',
-    database: 'toko_transaksi'
+    database: 'toko_transaksi' // Sesuaikan dengan nama database kamu
 });
 
-// Cek koneksi ke database MySQL
 db.connect((err) => {
     if (err) {
-        console.error('Waduh, gagal konek ke MySQL:', err.message);
-        return;
+        console.error('Database mati wak, hidupin XAMPP dulu!:', err);
+    } else {
+        console.log('Mantap! Berhasil terhubung ke database MySQL XAMPP.');
     }
-    console.log('Mantap! Berhasil terhubung ke database MySQL XAMPP.');
 });
 
-// =========================================================
-// [1] RUTE DATA MASTER - PELANGGAN (TANPA TELEPON)
-// =========================================================
+// Penyimpanan token sementara di memori server (Sesuai request: kode tertentu yang dikenali API itu sendiri)
+const activeTokens = new Map(); 
 
-// 1. GET ALL PELANGGAN
-app.get('/api/pelanggan', (req, res) => {
-    const query = "SELECT id_pelanggan, nama_pelanggan, email FROM pelanggan";
-    db.query(query, (err, results) => {
+// ==========================================
+// ==========================================
+// 2. ENDPOINT AUTENTIKASI: LOGIN (FIXED)
+// ==========================================
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body; // Ambil data dari body di baris tersendiri
+
+    if (!username || !password) {
+        return res.status(400).json({ status: 'error', message: 'Username dan password wajib diisi!' });
+    }
+
+    const query = 'SELECT * FROM users WHERE username = ? AND password = ?';
+    db.query(query, [username, password], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // Validasi: Jika username & password salah / tidak ditemukan
+        if (results.length === 0) {
+            return res.status(401).json({ 
+                status: 'error', 
+                message: 'Autentikasi gagal! Username atau password salah.' 
+            });
+        }
+
+        // Jika benar, generate token acak unik
+        const token = crypto.randomBytes(32).toString('hex');
+        
+        // Simpan token ke memori dengan info user
+        activeTokens.set(token, results[0].username);
+
+        // Response berupa token sesuai instruksi dosen
+        res.json({
+            status: 'success',
+            message: 'Login berhasil!',
+            token: token
+        });
+    });
+});
+
+// ==========================================
+// 3. MIDDLEWARE VALIDASI TOKEN (SATPAM API)
+// ==========================================
+const verifyToken = (req, res, next) => {
+    // Mengambil token dari header request bernama 'Authorization'
+    const token = req.headers['authorization'];
+
+    if (!token) {
+        return res.status(401).json({ 
+            status: 'error', 
+            message: 'Akses ditolak! Anda harus menyertakan token autentikasi.' 
+            });
+    }
+
+    // Validasi apakah token terdaftar atau benar
+    if (!activeTokens.has(token)) {
+        return res.status(403).json({ 
+            status: 'error', 
+            message: 'Token salah atau sudah kadaluarsa!' 
+        });
+    }
+
+    // Jika token benar, lanjut ke rute yang dituju
+    req.currentUser = activeTokens.get(token);
+    next();
+};
+
+// PENTING: Semua rute di bawah ini otomatis dilindungi oleh verifyToken!
+
+// ==========================================
+// 4. CRUD DATA MASTER - PELANGGAN (SECURE)
+// ==========================================
+app.get('/api/pelanggan', verifyToken, (req, res) => {
+    db.query('SELECT * FROM pelanggan', (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
 });
 
-// 2. CREATE PELANGGAN (INSERT)
-app.post('/api/pelanggan', (req, res) => {
+app.post('/api/pelanggan', verifyToken, (req, { nama_pelanggan, email }, res) => {
+    db.query('INSERT INTO pelanggan (nama_pelanggan, email) VALUES (?, ?)', [nama_pelanggan, email], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Pelanggan berhasil ditambahkan!', id: results.insertId });
+    });
+});
+
+app.put('/api/pelanggan/:id', verifyToken, (req, res) => {
     const { nama_pelanggan, email } = req.body;
-    const query = "INSERT INTO pelanggan (nama_pelanggan, email) VALUES (?, ?)";
-    db.query(query, [nama_pelanggan, email], (err, result) => {
+    db.query('UPDATE pelanggan SET nama_pelanggan = ?, email = ? WHERE id_pelanggan = ?', [nama_pelanggan, email, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id: result.insertId, nama_pelanggan, email });
+        res.json({ message: 'Data pelanggan berhasil diupdate!' });
     });
 });
 
-// 3. UPDATE PELANGGAN
-app.put('/api/pelanggan/:id', (req, res) => {
-    const { id } = req.params;
-    const { nama_pelanggan, email } = req.body;
-    const query = "UPDATE pelanggan SET nama_pelanggan = ?, email = ? WHERE id_pelanggan = ?";
-    db.query(query, [nama_pelanggan, email, id], (err, result) => {
+app.delete('/api/pelanggan/:id', verifyToken, (req, res) => {
+    db.query('DELETE FROM pelanggan WHERE id_pelanggan = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Data pelanggan berhasil diperbarui" });
+        res.json({ message: 'Pelanggan berhasil dihapus!' });
     });
 });
 
-// 4. DELETE PELANGGAN
-app.delete('/api/pelanggan/:id', (req, res) => {
-    const { id } = req.params;
-    const query = "DELETE FROM pelanggan WHERE id_pelanggan = ?";
-    db.query(query, [id], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Pelanggan berhasil dihapus" });
-    });
-});
-
-
-// =========================================================
-// [2] RUTE DATA TRANSAKSIONAL - TRANSAKSI (CRUD LENGKAP)
-// =========================================================
-
-// 1. GET ALL TRANSAKSI (JOIN)
-app.get('/api/transaksi', (req, res) => {
+// ==========================================
+// 5. CRUD DATA TRANSAKSIONAL (SECURE)
+// ==========================================
+app.get('/api/transaksi', verifyToken, (req, res) => {
     const query = `
-        SELECT 
-            t.id_transaksi, 
-            t.tgl_transaksi, 
-            p.nama_pelanggan, 
-            pr.nama_produk, 
-            dt.jumlah, 
-            dt.subtotal
+        SELECT t.id_transaksi, p.nama_pelanggan, t.tgl_transaksi, pr.nama_produk, dt.jumlah, dt.subtotal 
         FROM transaksi t
         JOIN pelanggan p ON t.id_pelanggan = p.id_pelanggan
         JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
@@ -93,62 +141,37 @@ app.get('/api/transaksi', (req, res) => {
     });
 });
 
-// 2. CREATE TRANSAKSI (INSERT BARU)
-app.post('/api/transaksi', (req, res) => {
+app.post('/api/transaksi', verifyToken, (req, { id_pelanggan, tgl_transaksi }, res) => {
+    db.query('INSERT INTO transaksi (id_pelanggan, tgl_transaksi) VALUES (?, ?)', [id_pelanggan, tgl_transaksi], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Induk Transaksi sukses dibuat!', id_transaksi: results.insertId });
+    });
+});
+
+app.put('/api/transaksi/:id', verifyToken, (req, res) => {
     const { id_pelanggan, tgl_transaksi } = req.body;
-    const query = "INSERT INTO transaksi (id_pelanggan, tgl_transaksi) VALUES (?, ?)";
-    db.query(query, [id_pelanggan, tgl_transaksi], (err, result) => {
+    db.query('UPDATE transaksi SET id_pelanggan = ?, tgl_transaksi = ? WHERE id_transaksi = ?', [id_pelanggan, tgl_transaksi, req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ id_transaksi: result.insertId, message: "Transaksi induk sukses dibuat." });
+        res.json({ message: 'Transaksi berhasil diupdate!' });
     });
 });
 
-// 3. UPDATE TRANSAKSI 
-app.put('/api/transaksi/:id', (req, res) => {
-    const { id } = req.params;
-    const { id_pelanggan, tgl_transaksi } = req.body;
-
-    const query = "UPDATE transaksi SET id_pelanggan = ?, tgl_transaksi = ? WHERE id_transaksi = ?";
-    db.query(query, [id_pelanggan, tgl_transaksi, id], (err, result) => {
+app.delete('/api/transaksi/:id', verifyToken, (req, res) => {
+    db.query('DELETE FROM transaksi WHERE id_transaksi = ?', [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "ID Transaksi tidak ditemukan" });
-        }
-        res.json({ message: `Mantap! Data transaksi dengan ID ${id} berhasil diperbarui.` });
+        res.json({ message: 'Transaksi berhasil dihapus!' });
     });
 });
 
-// 4. DELETE TRANSAKSI (Cascade Manual)
-app.delete('/api/transaksi/:id', (req, res) => {
-    const { id } = req.params;
-
-    const queryDetail = "DELETE FROM detail_transaksi WHERE id_transaksi = ?";
-    db.query(queryDetail, [id], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-
-        const queryInduk = "DELETE FROM transaksi WHERE id_transaksi = ?";
-        db.query(queryInduk, [id], (err, transaksiResult) => {
-            if (err) return res.status(500).json({ error: err.message });
-
-            if (transaksiResult.affectedRows === 0) {
-                return res.status(404).json({ message: "ID Transaksi tidak ditemukan" });
-            }
-            res.json({ message: `Mantap! Transaksi dengan ID ${id} beserta detailnya sukses dihapus total.` });
-        });
-    });
-});
-
-
-// =========================================================
-// [3] RUTE STATISTIK / RINGKASAN DATA
-// =========================================================
-app.get('/api/statistik', (req, res) => {
+// ==========================================
+// 6. STATISTIK DATA TRANSAKSIONAL (SECURE)
+// ==========================================
+app.get('/api/statistik', verifyToken, (req, res) => {
     const query = `
         SELECT 
             (SELECT COUNT(*) FROM pelanggan) AS total_pelanggan,
             (SELECT COUNT(*) FROM transaksi) AS total_transaksi,
-            (SELECT IFNULL(SUM(subtotal), 0) FROM detail_transaksi) AS total_pendapatan
+            (SELECT SUM(subtotal) FROM detail_transaksi) AS total_pendapatan
     `;
     db.query(query, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -156,8 +179,6 @@ app.get('/api/statistik', (req, res) => {
     });
 });
 
-
-// Jalankan Server Express pada Port 3000
 app.listen(port, () => {
-    console.log(`Server jalan di http://localhost:${port}`);
+    console.log(`Server jalan aman di http://localhost:${port}`);
 });
