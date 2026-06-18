@@ -15,6 +15,13 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // KONEKSI DATABASE POSTGRESQL (NEON)
+if (!process.env.DATABASE_URL) {
+    console.error("❌ ERROR: DATABASE_URL tidak terdeteksi di Environment Variables!");
+} else {
+    const maskedUrl = process.env.DATABASE_URL.replace(/:[^:@/]+@/, ':******@');
+    console.log("ℹ️ DATABASE_URL terdeteksi:", maskedUrl);
+}
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
