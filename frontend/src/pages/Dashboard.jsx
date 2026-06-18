@@ -26,7 +26,7 @@ const Dashboard = () => {
     return userData ? JSON.parse(userData).token : null;
   };
 
-  const API_URL = 'https://toko-api-express-x72i.vercel.app/api';
+  const API_URL = 'https://toko-api-express-41u1.vercel.app/api';
 
   useEffect(() => {
     const userData = localStorage.getItem('user');

@@ -14,7 +14,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://toko-api-express-x72i.vercel.app/api/login', {
+      const response = await fetch('https://toko-api-express-41u1.vercel.app/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
