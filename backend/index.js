@@ -36,8 +36,7 @@ pool.connect((err, client, release) => {
     }
 });
 
-// Penyimpanan token login admin sementara di memori server
-const activeTokens = new Map();
+// (Map dihapus karena Vercel Serverless tidak bisa menyimpan state di memori)
 
 // ==========================================
 // 1. ENDPOINT AUTENTIKASI: LOGIN
@@ -65,8 +64,8 @@ app.post('/api/login', async (req, res) => {
             });
         }
 
-        const token = crypto.randomBytes(32).toString('hex');
-        activeTokens.set(token, result.rows[0].username);
+        // Buat token statis (base64 dari username:password) agar tahan di Vercel Serverless
+        const token = Buffer.from(username + ':' + password).toString('base64');
 
         console.log(`Hasil: Login Sukses! Token dibuat untuk user: ${result.rows[0].username}`);
 
@@ -84,7 +83,7 @@ app.post('/api/login', async (req, res) => {
 // ==========================================
 // 2. MIDDLEWARE VALIDASI TOKEN (SATPAM API)
 // ==========================================
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
     const token = req.headers['authorization'];
 
     if (!token) {
@@ -94,15 +93,29 @@ const verifyToken = (req, res, next) => {
         });
     }
 
-    if (!activeTokens.has(token)) {
+    try {
+        // Decode token untuk memvalidasi ulang ke database (Serverless friendly)
+        const decoded = Buffer.from(token, 'base64').toString('utf-8');
+        const [username, password] = decoded.split(':');
+
+        const query = 'SELECT * FROM "user" WHERE username = $1 AND password = $2';
+        const result = await pool.query(query, [username, password]);
+
+        if (result.rows.length === 0) {
+            return res.status(403).json({
+                status: 'error',
+                message: 'Token salah atau sudah kadaluarsa (DB reject)!'
+            });
+        }
+
+        req.currentUser = username;
+        next();
+    } catch (err) {
         return res.status(403).json({
             status: 'error',
-            message: 'Token salah atau sudah kadaluarsa!'
+            message: 'Token format invalid!'
         });
     }
-
-    req.currentUser = activeTokens.get(token);
-    next();
 };
 
 // ==========================================
