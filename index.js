@@ -179,6 +179,49 @@ app.delete('/api/pelanggan/:id', verifyToken, async (req, res) => {
     }
 });
 
+app.delete('/api/pelanggan', verifyToken, async (req, res) => {
+    const { id_pelanggan, id } = req.body;
+    const targetId = parseInt(id_pelanggan || id);
+
+    if (!targetId) {
+        return res.status(400).json({ status: 'error', message: 'ID pelanggan (id_pelanggan atau id) wajib disertakan dalam body!' });
+    }
+
+    const idPelanggan = targetId;
+    console.log(`=== MENCOBA HAPUS PELANGGAN ID: ${idPelanggan} (FROM BODY) ===`);
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Cari tahu apakah pelanggan ini punya riwayat di tabel transaksi
+        const resTrans = await client.query('SELECT id_transaksi FROM transaksi WHERE id_pelanggan = $1', [idPelanggan]);
+
+        if (resTrans.rows.length > 0) {
+            const daftarIdTransaksi = resTrans.rows.map(t => t.id_transaksi);
+
+            // Hapus detail_transaksi terlebih dahulu demi memutus foreign key
+            await client.query('DELETE FROM detail_transaksi WHERE id_transaksi = ANY($1::int[])', [daftarIdTransaksi]);
+
+            // Hapus data induk di tabel transaksi
+            await client.query('DELETE FROM transaksi WHERE id_pelanggan = $1', [idPelanggan]);
+        }
+
+        // Hapus data pelanggan utama
+        await client.query('DELETE FROM pelanggan WHERE id_pelanggan = $1', [idPelanggan]);
+
+        await client.query('COMMIT');
+        console.log(`Hasil: Pelanggan ID ${idPelanggan} berhasil dihapus bersih dari database.`);
+        res.json({ status: 'success', message: 'Data pelanggan berhasil dihapus total!' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Gagal menghapus pelanggan:", err.message);
+        res.status(500).json({ status: 'error', message: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 app.put('/api/pelanggan/:id', verifyToken, async (req, res) => {
     const id = parseInt(req.params.id);
     const { nama_pelanggan, email } = req.body;
@@ -357,6 +400,30 @@ app.delete('/api/transaksi/:id', async (req, res) => {
         await client.query('BEGIN');
         await client.query('DELETE FROM detail_transaksi WHERE id_transaksi = $1', [id]);
         await client.query('DELETE FROM transaksi WHERE id_transaksi = $1', [id]);
+        await client.query('COMMIT');
+        res.json({ status: 'success', message: 'Transaksi berhasil dihapus!' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Gagal hapus transaksi:", err.message);
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+app.delete('/api/transaksi', async (req, res) => {
+    const { id_transaksi, id } = req.body;
+    const targetId = parseInt(id_transaksi || id);
+
+    if (!targetId) {
+        return res.status(400).json({ status: 'error', message: 'ID transaksi (id_transaksi atau id) wajib disertakan dalam body!' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM detail_transaksi WHERE id_transaksi = $1', [targetId]);
+        await client.query('DELETE FROM transaksi WHERE id_transaksi = $1', [targetId]);
         await client.query('COMMIT');
         res.json({ status: 'success', message: 'Transaksi berhasil dihapus!' });
     } catch (err) {
