@@ -587,3 +587,5 @@ app.get('/', (req, res) => {
 app.listen(port, '0.0.0.0', () => {
     console.log(`🚀 Server jalan aman di port ${port}`);
 });
+
+module.exports = app;
