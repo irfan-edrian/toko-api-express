@@ -22,8 +22,10 @@ const Keuangan = () => {
         return;
       }
 
+      const API_URL = 'https://toko-api-express-41u1.vercel.app/api';
+
       // Fetch Statistik (untuk saldo)
-      const resStat = await fetch(import.meta.env.VITE_API_URL + '/api/statistik', {
+      const resStat = await fetch(`${API_URL}/statistik`, {
         headers: { 'Authorization': token }
       });
       const dataStat = await resStat.json();
@@ -34,7 +36,7 @@ const Keuangan = () => {
       }
 
       // Fetch Riwayat Arus Kas
-      const resKas = await fetch(import.meta.env.VITE_API_URL + '/api/keuangan', {
+      const resKas = await fetch(`${API_URL}/keuangan`, {
         headers: { 'Authorization': token }
       });
       const dataKas = await resKas.json();
