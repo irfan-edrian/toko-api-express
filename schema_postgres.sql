@@ -2,6 +2,7 @@
 DROP TABLE IF EXISTS detail_transaksi CASCADE;
 DROP TABLE IF EXISTS transaksi CASCADE;
 DROP TABLE IF EXISTS pelanggan CASCADE;
+DROP TABLE IF EXISTS produk CASCADE;
 DROP TABLE IF EXISTS "user" CASCADE;
 
 -- Tabel User
@@ -9,6 +10,14 @@ CREATE TABLE "user" (
     id_user SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL
+);
+
+-- Tabel Produk
+CREATE TABLE produk (
+    id_produk SERIAL PRIMARY KEY,
+    nama_produk VARCHAR(255) NOT NULL,
+    harga INT NOT NULL,
+    stok INT DEFAULT 0
 );
 
 -- Tabel Pelanggan

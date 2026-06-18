@@ -180,6 +180,47 @@ app.delete('/api/pelanggan/:id', verifyToken, async (req, res) => {
 });
 
 // ==========================================
+// 3.5. CRUD DATA MASTER - PRODUK
+// ==========================================
+app.get('/api/produk', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM produk ORDER BY id_produk ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Gagal get produk:", err);
+        res.status(500).json({ error: err.message || err.toString() });
+    }
+});
+
+app.post('/api/produk', verifyToken, async (req, res) => {
+    const { nama_produk, harga, stok } = req.body;
+
+    if (!nama_produk || harga === undefined || stok === undefined) {
+        return res.status(400).json({ status: 'error', message: 'Data nama, harga, dan stok wajib diisi!' });
+    }
+
+    try {
+        const queryInsert = 'INSERT INTO produk (nama_produk, harga, stok) VALUES ($1, $2, $3) RETURNING id_produk';
+        const result = await pool.query(queryInsert, [nama_produk, parseInt(harga), parseInt(stok)]);
+        res.status(201).json({ status: 'success', message: 'Produk baru berhasil disimpan!', id_produk: result.rows[0].id_produk });
+    } catch (err) {
+        console.error("Gagal SQL Insert Produk:", err);
+        res.status(500).json({ status: 'error', message: err.message || err.toString() });
+    }
+});
+
+app.delete('/api/produk/:id', verifyToken, async (req, res) => {
+    const id = parseInt(req.params.id);
+    try {
+        await pool.query('DELETE FROM produk WHERE id_produk = $1', [id]);
+        res.json({ status: 'success', message: 'Produk berhasil dihapus!' });
+    } catch (err) {
+        console.error("Gagal hapus produk:", err);
+        res.status(500).json({ status: 'error', message: err.message || err.toString() });
+    }
+});
+
+// ==========================================
 // 4. CRUD DATA TRANSAKSIONAL
 // ==========================================
 app.get('/api/transaksi', async (req, res) => {
@@ -208,7 +249,7 @@ app.get('/api/transaksi', async (req, res) => {
 });
 
 app.post('/api/transaksi', async (req, res) => {
-    let { id_pelanggan, tanggal_transaksi, nama_produk, harga, jumlah } = req.body;
+    let { id_pelanggan, id_produk, tanggal_transaksi, nama_produk, harga, jumlah } = req.body;
 
     if (id_pelanggan === '' || id_pelanggan === null || id_pelanggan === undefined || id_pelanggan === 'null' || id_pelanggan === 'NULL') {
         id_pelanggan = null;
@@ -220,21 +261,38 @@ app.post('/api/transaksi', async (req, res) => {
         tanggal_transaksi = new Date();
     }
 
+    const itemJumlah = parseInt(jumlah) || 0;
+    let itemHarga = parseInt(harga) || 0;
+    let itemNama = nama_produk;
+
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+
+        if (id_produk) {
+            const productRes = await client.query('SELECT nama_produk, harga, stok FROM produk WHERE id_produk = $1', [id_produk]);
+            if (productRes.rows.length === 0) {
+                throw new Error('Produk tidak ditemukan!');
+            }
+            const product = productRes.rows[0];
+            if (product.stok < itemJumlah) {
+                throw new Error(`Stok tidak mencukupi! Stok saat ini: ${product.stok}`);
+            }
+            itemNama = product.nama_produk;
+            itemHarga = product.harga;
+
+            // Kurangi stok produk
+            await client.query('UPDATE produk SET stok = stok - $1 WHERE id_produk = $2', [itemJumlah, id_produk]);
+        }
 
         const insertTransQuery = 'INSERT INTO transaksi (id_pelanggan, tanggal_transaksi) VALUES ($1, $2) RETURNING id_transaksi';
         const resTrans = await client.query(insertTransQuery, [id_pelanggan, tanggal_transaksi]);
         const id_transaksi = resTrans.rows[0].id_transaksi;
 
-        if (nama_produk) {
-            const itemHarga = parseInt(harga) || 0;
-            const itemJumlah = parseInt(jumlah) || 0;
+        if (itemNama) {
             const subtotal = itemHarga * itemJumlah;
-
             const insertDetailQuery = 'INSERT INTO detail_transaksi (id_transaksi, nama_produk, harga, jumlah, subtotal) VALUES ($1, $2, $3, $4, $5)';
-            await client.query(insertDetailQuery, [id_transaksi, nama_produk, itemHarga, itemJumlah, subtotal]);
+            await client.query(insertDetailQuery, [id_transaksi, itemNama, itemHarga, itemJumlah, subtotal]);
         }
 
         await client.query('COMMIT');
@@ -245,8 +303,8 @@ app.post('/api/transaksi', async (req, res) => {
         });
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error("Gagal insert transaksi:", err.message);
-        res.status(500).json({ error: err.message });
+        console.error("Gagal insert transaksi:", err);
+        res.status(500).json({ error: err.message || err.toString() });
     } finally {
         client.release();
     }

@@ -81,6 +81,38 @@
             </div>
         </div>
 
+        <!-- Manajemen Data Produk -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Manajemen Data Produk</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Kelola data master produk, harga satuan, dan stok toko</p>
+                </div>
+                <button onclick="bukaModalProduk()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md shadow-indigo-100">
+                    + Tambah Produk
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr
+                            class="bg-slate-50 border-b border-slate-200 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Nama Produk</th>
+                            <th class="p-3">Harga</th>
+                            <th class="p-3">Stok</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabel-produk-body" class="text-sm text-slate-700 divide-y divide-slate-100">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Manajemen Data Transaksi -->
         <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-8">
             <div class="flex justify-between items-center mb-6">
@@ -152,6 +184,46 @@
         </div>
     </div>
 
+    <!-- Modal Produk -->
+    <div id="modal-produk"
+        class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
+            <h3 class="text-lg font-bold text-slate-800 mb-1">Tambah Produk Baru</h3>
+            <p class="text-xs text-slate-400 mb-4">Masukkan nama produk, harga, dan jumlah stok awal</p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Produk</label>
+                    <input type="text" id="input-nama-produk-master" placeholder="Masukkan nama produk..."
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Harga (Rp)</label>
+                        <input type="number" id="input-harga-produk-master" placeholder="0" min="0"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Stok</label>
+                        <input type="number" id="input-stok-produk-master" placeholder="0" min="0"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 mt-6">
+                <button onclick="tutupModalProduk()"
+                    class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition">
+                    Batal
+                </button>
+                <button onclick="simpanProduk()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                    Simpan Data
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Transaksi -->
     <div id="modal-transaksi"
         class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
@@ -174,10 +246,11 @@
                             class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Barang /
-                            Produk</label>
-                        <input type="text" id="input-nama-produk" placeholder="Masukkan nama barang..." required
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Pilih Produk</label>
+                        <select id="select-produk-transaksi" onchange="autoFillHarga()" required
                             class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                            <option value="">Pilih Produk...</option>
+                        </select>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -385,7 +458,7 @@
             document.getElementById('modal-transaksi').classList.add('hidden');
             document.getElementById('select-pelanggan-transaksi').value = '';
             document.getElementById('input-tanggal-transaksi').value = '';
-            document.getElementById('input-nama-produk').value = '';
+            document.getElementById('select-produk-transaksi').value = '';
             document.getElementById('input-harga-produk').value = '';
             document.getElementById('input-jumlah-produk').value = '';
             document.getElementById('input-subtotal-tampilan').value = 'Rp 0';
@@ -443,8 +516,7 @@
 
             const idPelanggan = document.getElementById('select-pelanggan-transaksi').value;
             const tanggalTransaksi = document.getElementById('input-tanggal-transaksi').value;
-            const namaProduk = document.getElementById('input-nama-produk').value.trim();
-            const harga = document.getElementById('input-harga-produk').value;
+            const idProduk = document.getElementById('select-produk-transaksi').value;
             const jumlah = document.getElementById('input-jumlah-produk').value;
 
             try {
@@ -456,8 +528,7 @@
                     body: JSON.stringify({
                         id_pelanggan: idPelanggan || null,
                         tanggal_transaksi: tanggalTransaksi || null,
-                        nama_produk: namaProduk,
-                        harga: harga,
+                        id_produk: idProduk ? parseInt(idProduk) : null,
                         jumlah: jumlah
                     })
                 });
@@ -466,8 +537,10 @@
                     tutupModalTransaksi();
                     await loadData();      // Refresh tabel transaksi otomatis tanpa reload halaman
                     await muatStatistik(); // Refresh counter statistik di atas
+                    await muatDataProduk(); // Segarkan stok produk
                 } else {
-                    alert('Gagal menyimpan data transaksi baru!');
+                    const errorData = await response.json();
+                    alert('Gagal: ' + (errorData.error || 'Gagal menyimpan data transaksi baru!'));
                 }
             } catch (err) {
                 console.error('Error saat menyimpan transaksi:', err);
@@ -495,6 +568,128 @@
             }
         }
 
+        // --- MANAJEMEN DATA MASTER - PRODUK ---
+        function bukaModalProduk() {
+            document.getElementById('modal-produk').classList.remove('hidden');
+        }
+
+        function tutupModalProduk() {
+            document.getElementById('modal-produk').classList.add('hidden');
+            document.getElementById('input-nama-produk-master').value = '';
+            document.getElementById('input-harga-produk-master').value = '';
+            document.getElementById('input-stok-produk-master').value = '';
+        }
+
+        async function muatDataProduk() {
+            try {
+                const response = await fetch('/api/produk', {
+                    method: 'GET',
+                    headers: { 'Authorization': token }
+                });
+                const produk = await response.json();
+
+                if (response.ok) {
+                    const tbody = document.getElementById('tabel-produk-body');
+                    tbody.innerHTML = '';
+
+                    // Populate select options for transaction creation
+                    const selectProduk = document.getElementById('select-produk-transaksi');
+                    if (selectProduk) {
+                        selectProduk.innerHTML = '<option value="">Pilih Produk...</option>';
+                        produk.forEach(p => {
+                            selectProduk.innerHTML += `<option value="${p.id_produk}" data-harga="${p.harga}">${p.nama_produk} (Harga: Rp${p.harga.toLocaleString('id-ID')}, Stok: ${p.stok})</option>`;
+                        });
+                    }
+
+                    if (produk.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada data produk di database.</td></tr>`;
+                        return;
+                    }
+
+                    produk.forEach(p => {
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-slate-50/80 transition">
+                                <td class="p-3 font-semibold text-slate-400">${p.id_produk}</td>
+                                <td class="p-3 font-semibold text-slate-800">${p.nama_produk}</td>
+                                <td class="p-3 font-bold text-slate-700">Rp ${p.harga.toLocaleString('id-ID')}</td>
+                                <td class="p-3 text-slate-500">${p.stok} pcs</td>
+                                <td class="p-3 text-center">
+                                    <button onclick="hapusProduk(${p.id_produk})" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-md text-xs font-bold transition">
+                                        Hapus
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch (err) {
+                console.error('Gagal memuat data produk:', err);
+            }
+        }
+
+        async function simpanProduk() {
+            const nama = document.getElementById('input-nama-produk-master').value.trim();
+            const harga = document.getElementById('input-harga-produk-master').value;
+            const stok = document.getElementById('input-stok-produk-master').value;
+
+            if (!nama || harga === '' || stok === '') {
+                return alert('Form input tidak boleh kosong ya wak!');
+            }
+
+            try {
+                const response = await fetch('/api/produk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({ nama_produk: nama, harga: harga, stok: stok })
+                });
+
+                if (response.ok) {
+                    tutupModalProduk();
+                    muatDataProduk(); // Perbarui tabel produk langsung
+                } else {
+                    const errorData = await response.json();
+                    alert('Gagal menyimpan data produk baru: ' + (errorData.message || 'Error'));
+                }
+            } catch (err) {
+                console.error('Error saat menyimpan produk:', err);
+            }
+        }
+
+        async function hapusProduk(id) {
+            if (!confirm('Apakah kamu yakin ingin menghapus produk ini, Fan?')) return;
+
+            try {
+                const response = await fetch(`/api/produk/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': token }
+                });
+
+                if (response.ok) {
+                    muatDataProduk(); // Segarkan tampilan tabel
+                } else {
+                    const errorData = await response.json();
+                    alert('Gagal: ' + (errorData.message || 'Terjadi kesalahan sistem'));
+                }
+            } catch (err) {
+                console.error('Error saat menghapus produk:', err);
+            }
+        }
+
+        function autoFillHarga() {
+            const select = document.getElementById('select-produk-transaksi');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.value !== '') {
+                const harga = selectedOption.getAttribute('data-harga') || 0;
+                document.getElementById('input-harga-produk').value = harga;
+            } else {
+                document.getElementById('input-harga-produk').value = '';
+            }
+            hitungSubtotal();
+        }
+
         // 6. Fungsi Log Keluar Sistem
         function logout() {
             localStorage.removeItem('admin_token'); // Buang token dari browser
@@ -504,6 +699,7 @@
         // JALANKAN PROSES PENGAMBILAN DATA KETIKA HALAMAN SELESAI DIMUAT
         muatStatistik();
         muatDataPelanggan();
+        muatDataProduk();
         loadData();
     </script>
 </body>
