@@ -42,7 +42,13 @@ Saat ini, Anda memiliki total **18 endpoint** yang aktif dan terdefinisi di dala
 - **`DELETE /api/transaksi`** *(Alternatif)*
   **Fungsi:** Menghapus data transaksi (ID dikirimkan di dalam *body*).
 
-## 📊 5. Statistik & Dashboard
+## 💰 5. Data Keuangan (Arus Kas)
+- **`GET /api/keuangan`**
+  **Fungsi:** Mengambil riwayat lengkap transaksi arus kas (pengeluaran dan pemasukan).
+  **Data yang dikembalikan:**
+  Array objek berisi `id_kas`, `tipe` (Pemasukan/Pengeluaran), `nominal`, `keterangan`, dan `tanggal`.
+
+## 📊 6. Statistik & Dashboard
 - **`GET /api/statistik`**
   **Fungsi:** Mengambil ringkasan data untuk ditampilkan di halaman Dashboard frontend.
   **Data yang dikembalikan:**

@@ -234,6 +234,21 @@
 			]
 		},
 		{
+			"name": "Keuangan (Arus Kas)",
+			"item": [
+				{
+					"name": "Keuangan - Get Riwayat Arus Kas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/keuangan" }
+					}
+				}
+			]
+		},
+		{
 			"name": "Statistik",
 			"item": [
 				{

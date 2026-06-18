@@ -608,7 +608,30 @@ app.put('/api/transaksi', async (req, res) => {
 });
 
 // ==========================================
-// 5. STATISTIK DATA TRANSAKSIONAL
+// 5. DATA KEUANGAN (ARUS KAS)
+// ==========================================
+app.get('/api/keuangan', verifyToken, async (req, res) => {
+    const query = `
+        SELECT 
+            id_kas, 
+            tipe, 
+            nominal, 
+            keterangan, 
+            tanggal 
+        FROM arus_kas 
+        ORDER BY tanggal DESC
+    `;
+    try {
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Gagal get keuangan:", err);
+        res.status(500).json({ error: err.message || err.toString() });
+    }
+});
+
+// ==========================================
+// 6. STATISTIK DATA TRANSAKSIONAL
 // ==========================================
 app.get('/api/statistik', verifyToken, async (req, res) => {
     const query = `
