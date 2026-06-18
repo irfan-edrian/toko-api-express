@@ -179,6 +179,46 @@ app.delete('/api/pelanggan/:id', verifyToken, async (req, res) => {
     }
 });
 
+app.put('/api/pelanggan/:id', verifyToken, async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { nama_pelanggan, email } = req.body;
+
+    if (!nama_pelanggan || !email) {
+        return res.status(400).json({ status: 'error', message: 'Data nama dan email wajib diisi!' });
+    }
+
+    try {
+        const queryUpdate = 'UPDATE pelanggan SET nama_pelanggan = $1, email = $2 WHERE id_pelanggan = $3';
+        await pool.query(queryUpdate, [nama_pelanggan, email, id]);
+        res.json({ status: 'success', message: 'Data pelanggan berhasil diperbarui!' });
+    } catch (err) {
+        console.error("Gagal update pelanggan:", err);
+        res.status(500).json({ status: 'error', message: err.message || err.toString() });
+    }
+});
+
+app.put('/api/pelanggan', verifyToken, async (req, res) => {
+    const { id_pelanggan, id, nama_pelanggan, email } = req.body;
+    const targetId = parseInt(id_pelanggan || id);
+
+    if (!targetId) {
+        return res.status(400).json({ status: 'error', message: 'ID pelanggan (id_pelanggan atau id) wajib disertakan dalam body!' });
+    }
+
+    if (!nama_pelanggan || !email) {
+        return res.status(400).json({ status: 'error', message: 'Data nama dan email wajib diisi!' });
+    }
+
+    try {
+        const queryUpdate = 'UPDATE pelanggan SET nama_pelanggan = $1, email = $2 WHERE id_pelanggan = $3';
+        await pool.query(queryUpdate, [nama_pelanggan, email, targetId]);
+        res.json({ status: 'success', message: 'Data pelanggan berhasil diperbarui!' });
+    } catch (err) {
+        console.error("Gagal update pelanggan:", err);
+        res.status(500).json({ status: 'error', message: err.message || err.toString() });
+    }
+});
+
 // ==========================================
 // 3.5. CRUD DATA MASTER - PRODUK
 // ==========================================
@@ -323,6 +363,126 @@ app.delete('/api/transaksi/:id', async (req, res) => {
         await client.query('ROLLBACK');
         console.error("Gagal hapus transaksi:", err.message);
         res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+app.put('/api/transaksi/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    let { id_pelanggan, id_produk, tanggal_transaksi, nama_produk, harga, jumlah } = req.body;
+
+    if (id_pelanggan === '' || id_pelanggan === null || id_pelanggan === undefined || id_pelanggan === 'null' || id_pelanggan === 'NULL') {
+        id_pelanggan = null;
+    } else {
+        id_pelanggan = parseInt(id_pelanggan);
+    }
+
+    const itemJumlah = parseInt(jumlah) || 0;
+    let itemHarga = parseInt(harga) || 0;
+    let itemNama = nama_produk;
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Update data induk transaksi
+        if (tanggal_transaksi) {
+            await client.query('UPDATE transaksi SET id_pelanggan = $1, tanggal_transaksi = $2 WHERE id_transaksi = $3', [id_pelanggan, tanggal_transaksi, id]);
+        } else {
+            await client.query('UPDATE transaksi SET id_pelanggan = $1 WHERE id_transaksi = $2', [id_pelanggan, id]);
+        }
+
+        // 2. Manage detail transaksi
+        if (id_produk) {
+            const productRes = await client.query('SELECT nama_produk, harga, stok FROM produk WHERE id_produk = $1', [id_produk]);
+            if (productRes.rows.length === 0) {
+                throw new Error('Produk tidak ditemukan!');
+            }
+            const product = productRes.rows[0];
+            itemNama = product.nama_produk;
+            itemHarga = product.harga;
+        }
+
+        if (itemNama) {
+            const subtotal = itemHarga * itemJumlah;
+            
+            // Cek apakah detail_transaksi sudah ada
+            const checkDetail = await client.query('SELECT id_detail FROM detail_transaksi WHERE id_transaksi = $1', [id]);
+            if (checkDetail.rows.length > 0) {
+                const updateDetailQuery = 'UPDATE detail_transaksi SET nama_produk = $1, harga = $2, jumlah = $3, subtotal = $4 WHERE id_transaksi = $5';
+                await client.query(updateDetailQuery, [itemNama, itemHarga, itemJumlah, subtotal, id]);
+            } else {
+                const insertDetailQuery = 'INSERT INTO detail_transaksi (id_transaksi, nama_produk, harga, jumlah, subtotal) VALUES ($1, $2, $3, $4, $5)';
+                await client.query(insertDetailQuery, [id, itemNama, itemHarga, itemJumlah, subtotal]);
+            }
+        }
+
+        await client.query('COMMIT');
+        res.json({ status: 'success', message: 'Transaksi berhasil diperbarui!' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Gagal update transaksi:", err);
+        res.status(500).json({ error: err.message || err.toString() });
+    } finally {
+        client.release();
+    }
+});
+
+app.put('/api/transaksi', async (req, res) => {
+    const { id_transaksi, id, id_pelanggan, id_produk, tanggal_transaksi, nama_produk, harga, jumlah } = req.body;
+    const targetId = parseInt(id_transaksi || id);
+
+    if (!targetId) {
+        return res.status(400).json({ status: 'error', message: 'ID transaksi (id_transaksi atau id) wajib disertakan dalam body!' });
+    }
+
+    const itemJumlah = parseInt(jumlah) || 0;
+    let itemHarga = parseInt(harga) || 0;
+    let itemNama = nama_produk;
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Update data induk transaksi
+        if (tanggal_transaksi) {
+            await client.query('UPDATE transaksi SET id_pelanggan = $1, tanggal_transaksi = $2 WHERE id_transaksi = $3', [id_pelanggan, tanggal_transaksi, targetId]);
+        } else {
+            await client.query('UPDATE transaksi SET id_pelanggan = $1 WHERE id_transaksi = $2', [id_pelanggan, targetId]);
+        }
+
+        // 2. Manage detail transaksi
+        if (id_produk) {
+            const productRes = await client.query('SELECT nama_produk, harga, stok FROM produk WHERE id_produk = $1', [id_produk]);
+            if (productRes.rows.length === 0) {
+                throw new Error('Produk tidak ditemukan!');
+            }
+            const product = productRes.rows[0];
+            itemNama = product.nama_produk;
+            itemHarga = product.harga;
+        }
+
+        if (itemNama) {
+            const subtotal = itemHarga * itemJumlah;
+            
+            // Cek apakah detail_transaksi sudah ada
+            const checkDetail = await client.query('SELECT id_detail FROM detail_transaksi WHERE id_transaksi = $1', [targetId]);
+            if (checkDetail.rows.length > 0) {
+                const updateDetailQuery = 'UPDATE detail_transaksi SET nama_produk = $1, harga = $2, jumlah = $3, subtotal = $4 WHERE id_transaksi = $5';
+                await client.query(updateDetailQuery, [itemNama, itemHarga, itemJumlah, subtotal, targetId]);
+            } else {
+                const insertDetailQuery = 'INSERT INTO detail_transaksi (id_transaksi, nama_produk, harga, jumlah, subtotal) VALUES ($1, $2, $3, $4, $5)';
+                await client.query(insertDetailQuery, [targetId, itemNama, itemHarga, itemJumlah, subtotal]);
+            }
+        }
+
+        await client.query('COMMIT');
+        res.json({ status: 'success', message: 'Transaksi berhasil diperbarui!' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Gagal update transaksi:", err);
+        res.status(500).json({ error: err.message || err.toString() });
     } finally {
         client.release();
     }
