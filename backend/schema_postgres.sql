@@ -1,4 +1,5 @@
 -- Hapus tabel lama jika ada (urutan dari anak ke induk)
+DROP TABLE IF EXISTS arus_kas CASCADE;
 DROP TABLE IF EXISTS detail_transaksi CASCADE;
 DROP TABLE IF EXISTS transaksi CASCADE;
 DROP TABLE IF EXISTS pelanggan CASCADE;
@@ -46,3 +47,12 @@ CREATE TABLE detail_transaksi (
 
 -- Seed data admin awal (username: irfan, password: 123)
 INSERT INTO "user" (username, password) VALUES ('irfan', '123') ON CONFLICT DO NOTHING;
+
+-- Tabel Arus Kas (Keuangan)
+CREATE TABLE arus_kas (
+    id_kas SERIAL PRIMARY KEY,
+    tipe VARCHAR(20) NOT NULL,
+    nominal INT NOT NULL,
+    keterangan VARCHAR(255),
+    tanggal TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

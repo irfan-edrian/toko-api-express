@@ -297,28 +297,41 @@ app.post('/api/produk', verifyToken, async (req, res) => {
         const checkQuery = 'SELECT id_produk, stok FROM produk WHERE LOWER(nama_produk) = LOWER($1)';
         const checkResult = await pool.query(checkQuery, [nama_produk]);
 
+        let id_produk_res;
         if (checkResult.rows.length > 0) {
             // Produk sudah ada, cukup tambahkan stoknya
             const existingProduct = checkResult.rows[0];
             const updateQuery = 'UPDATE produk SET stok = stok + $1, harga = $2 WHERE id_produk = $3 RETURNING id_produk';
             const result = await pool.query(updateQuery, [parseInt(stok), parseInt(harga), existingProduct.id_produk]);
-            
-            res.status(200).json({ 
-                status: 'success', 
-                message: 'Produk sudah ada, stok berhasil ditambahkan!', 
-                id_produk: result.rows[0].id_produk 
-            });
+            id_produk_res = result.rows[0].id_produk;
         } else {
             // Produk belum ada, buat baru
             const queryInsert = 'INSERT INTO produk (nama_produk, harga, stok) VALUES ($1, $2, $3) RETURNING id_produk';
             const result = await pool.query(queryInsert, [nama_produk, parseInt(harga), parseInt(stok)]);
-            
+            id_produk_res = result.rows[0].id_produk;
+        }
+
+        // --- Fitur Keuangan: Catat Pengeluaran Kulakan Stok ---
+        const totalPengeluaran = parseInt(harga) * parseInt(stok);
+        const kasQuery = `INSERT INTO arus_kas (tipe, nominal, keterangan) VALUES ('Pengeluaran', $1, $2)`;
+        const ket = `Beli stok ${nama_produk} sebanyak ${stok} pcs`;
+        await pool.query(kasQuery, [totalPengeluaran, ket]);
+        // -----------------------------------------------------
+
+        if (checkResult.rows.length > 0) {
+            res.status(200).json({ 
+                status: 'success', 
+                message: 'Produk sudah ada, stok berhasil ditambahkan, dan Pengeluaran dicatat!', 
+                id_produk: id_produk_res 
+            });
+        } else {
             res.status(201).json({ 
                 status: 'success', 
-                message: 'Produk baru berhasil disimpan!', 
-                id_produk: result.rows[0].id_produk 
+                message: 'Produk baru berhasil disimpan, dan Pengeluaran dicatat!', 
+                id_produk: id_produk_res 
             });
         }
+
     } catch (err) {
         console.error("Gagal SQL Insert/Update Produk:", err);
         res.status(500).json({ status: 'error', message: err.message || err.toString() });
@@ -409,6 +422,12 @@ app.post('/api/transaksi', async (req, res) => {
             const subtotal = itemHarga * itemJumlah;
             const insertDetailQuery = 'INSERT INTO detail_transaksi (id_transaksi, nama_produk, harga, jumlah, subtotal) VALUES ($1, $2, $3, $4, $5)';
             await client.query(insertDetailQuery, [id_transaksi, itemNama, itemHarga, itemJumlah, subtotal]);
+
+            // --- Fitur Keuangan: Catat Pemasukan Penjualan ---
+            const kasQuery = `INSERT INTO arus_kas (tipe, nominal, keterangan) VALUES ('Pemasukan', $1, $2)`;
+            const ket = `Penjualan Transaksi #${id_transaksi} (${itemNama})`;
+            await client.query(kasQuery, [subtotal, ket]);
+            // -------------------------------------------------
         }
 
         await client.query('COMMIT');
@@ -596,15 +615,25 @@ app.get('/api/statistik', verifyToken, async (req, res) => {
         SELECT 
             (SELECT COUNT(*) FROM pelanggan) AS total_pelanggan,
             (SELECT COUNT(*) FROM transaksi) AS total_transaksi,
-            (SELECT COALESCE(SUM(subtotal), 0) FROM detail_transaksi) AS total_pendapatan
+            (SELECT COALESCE(SUM(subtotal), 0) FROM detail_transaksi) AS total_pendapatan,
+            (SELECT COALESCE(SUM(nominal), 0) FROM arus_kas WHERE tipe = 'Pengeluaran') AS total_pengeluaran,
+            (SELECT COALESCE(SUM(nominal), 0) FROM arus_kas WHERE tipe = 'Pemasukan') AS total_pemasukan_kas
     `;
     try {
         const result = await pool.query(query);
         const row = result.rows[0];
+        
+        const pengeluaran = parseInt(row.total_pengeluaran) || 0;
+        // Pemasukan dari arus_kas (opsional, bisa juga pakai total_pendapatan)
+        const pemasukan = parseInt(row.total_pemasukan_kas) || 0;
+        const sisa_uang = pemasukan - pengeluaran;
+
         res.json({
             total_pelanggan: parseInt(row.total_pelanggan) || 0,
             total_transaksi: parseInt(row.total_transaksi) || 0,
-            total_pendapatan: parseInt(row.total_pendapatan) || 0
+            total_pendapatan: parseInt(row.total_pendapatan) || 0,
+            total_pengeluaran: pengeluaran,
+            sisa_uang: sisa_uang
         });
     } catch (err) {
         console.error("Gagal get statistik:", err.message);

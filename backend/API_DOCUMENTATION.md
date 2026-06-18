@@ -44,7 +44,13 @@ Saat ini, Anda memiliki total **18 endpoint** yang aktif dan terdefinisi di dala
 
 ## 📊 5. Statistik & Dashboard
 - **`GET /api/statistik`**
-  **Fungsi:** Mengambil ringkasan data (misalnya total pendapatan, jumlah pelanggan, jumlah produk, dll) untuk ditampilkan di halaman Dashboard frontend.
+  **Fungsi:** Mengambil ringkasan data untuk ditampilkan di halaman Dashboard frontend.
+  **Data yang dikembalikan:**
+  - `total_pelanggan`: Jumlah semua pelanggan
+  - `total_transaksi`: Jumlah total transaksi yang pernah terjadi
+  - `total_pendapatan`: Total uang masuk dari penjualan
+  - `total_pengeluaran`: Total uang keluar dari pembelian stok (otomatis tercatat saat `POST /api/produk`)
+  - `sisa_uang`: Saldo saat ini (`total_pendapatan` dikurangi `total_pengeluaran`)
 
 ## 🌐 6. Root (Pengecekan Server)
 - **`GET /`**
