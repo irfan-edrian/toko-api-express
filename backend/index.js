@@ -286,10 +286,10 @@ app.get('/api/produk', verifyToken, async (req, res) => {
 });
 
 app.post('/api/produk', verifyToken, async (req, res) => {
-    const { nama_produk, harga, stok } = req.body;
+    const { nama_produk, harga_beli, harga, stok } = req.body;
 
-    if (!nama_produk || harga === undefined || stok === undefined) {
-        return res.status(400).json({ status: 'error', message: 'Data nama, harga, dan stok wajib diisi!' });
+    if (!nama_produk || harga === undefined || stok === undefined || harga_beli === undefined) {
+        return res.status(400).json({ status: 'error', message: 'Data nama, harga beli, harga jual, dan stok wajib diisi!' });
     }
 
     try {
@@ -312,7 +312,7 @@ app.post('/api/produk', verifyToken, async (req, res) => {
         }
 
         // --- Fitur Keuangan: Catat Pengeluaran Kulakan Stok ---
-        const totalPengeluaran = parseInt(harga) * parseInt(stok);
+        const totalPengeluaran = parseInt(harga_beli || harga) * parseInt(stok);
         const kasQuery = `INSERT INTO arus_kas (tipe, nominal, keterangan) VALUES ('Pengeluaran', $1, $2)`;
         const ket = `Beli stok ${nama_produk} sebanyak ${stok} pcs`;
         await pool.query(kasQuery, [totalPengeluaran, ket]);

@@ -16,7 +16,7 @@ const Dashboard = () => {
 
   // Form States
   const [formPelanggan, setFormPelanggan] = useState({ nama_pelanggan: '', email: '' });
-  const [formProduk, setFormProduk] = useState({ nama_produk: '', harga: '', stok: '' });
+  const [formProduk, setFormProduk] = useState({ nama_produk: '', harga_beli: '', harga: '', stok: '' });
   const [formTransaksi, setFormTransaksi] = useState({
     id_pelanggan: '', tanggal_transaksi: '', id_produk: '', harga: '', jumlah: ''
   });
@@ -102,7 +102,7 @@ const Dashboard = () => {
       });
       if (res.ok) {
         setShowModalProduk(false);
-        setFormProduk({ nama_produk: '', harga: '', stok: '' });
+        setFormProduk({ nama_produk: '', harga_beli: '', harga: '', stok: '' });
         fetchProduk();
       }
     } catch (e) { console.error(e); }
@@ -383,14 +383,18 @@ const Dashboard = () => {
                 <label className="block text-xs font-semibold text-slate-300 mb-2">Nama Produk</label>
                 <input required type="text" value={formProduk.nama_produk} onChange={e => setFormProduk({...formProduk, nama_produk: e.target.value})} className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition" placeholder="Cth: Sabun Cuci" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4 mt-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-2">Harga (Rp)</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-2">Harga Modal/Beli (Rp)</label>
+                  <input required type="number" min="0" value={formProduk.harga_beli} onChange={e => setFormProduk({...formProduk, harga_beli: e.target.value})} className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-2">Harga Jual (Rp)</label>
                   <input required type="number" min="0" value={formProduk.harga} onChange={e => setFormProduk({...formProduk, harga: e.target.value})} className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition" placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-2">Stok Awal</label>
-                  <input required type="number" min="0" value={formProduk.stok} onChange={e => setFormProduk({...formProduk, stok: e.target.value})} className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition" placeholder="0" />
+                  <input required type="number" min="1" value={formProduk.stok} onChange={e => setFormProduk({...formProduk, stok: e.target.value})} className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 text-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition" placeholder="1" />
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-8">
