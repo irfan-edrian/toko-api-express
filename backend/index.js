@@ -11,9 +11,6 @@ const port = process.env.PORT || 8080;
 // MIDDLEWARE
 app.use(cors());
 app.use(express.json());
-// Melayani file frontend statis dari folder 'public'
-app.use(express.static(path.join(__dirname, 'public')));
-
 // KONEKSI DATABASE POSTGRESQL (NEON)
 if (!process.env.DATABASE_URL) {
     console.error("❌ ERROR: DATABASE_URL tidak terdeteksi di Environment Variables!");
@@ -578,10 +575,9 @@ app.get('/api/statistik', verifyToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-// Route utama untuk load dashboard
+// Default route untuk mengecek API status
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+    res.json({ message: "Toko API is running!" });
 });
 
 app.listen(port, '0.0.0.0', () => {
