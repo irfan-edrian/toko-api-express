@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Toko Penjualan</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md mx-4">
+        <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Login Admin</h2>
+        
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Username</label>
+                <input type="text" id="username" required
+                    class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Password</label>
+                <input type="password" id="password" required
+                    class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+            </div>
+            
+            <button type="submit" 
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition duration-200 mt-2 shadow-md shadow-blue-200">
+                Sign In
+            </button>
+        </form>
+
+        <div id="message" class="mt-4 text-center font-medium text-sm"></div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Mencegah reload halaman otomatis saat submit
+
+            const usernameInput = document.getElementById('username').value;
+            const passwordInput = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+
+            messageDiv.innerText = "Sedang memeriksa...";
+            messageDiv.className = "mt-4 text-center font-medium text-sm text-slate-500";
+
+            try {
+                // Menembak API login di backend Node.js
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: usernameInput,
+                        password: passwordInput
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.status === 'success') {
+                    // 1. Amankan token pemberian server ke memori browser
+                    localStorage.setItem('admin_token', result.token);
+
+                    // 2. Tampilkan teks hijau sukses
+                    messageDiv.innerText = "Login Berhasil! Mengalihkan...";
+                    messageDiv.className = "mt-4 text-center font-medium text-sm text-green-600";
+
+                    // 3. Tunggu 1.5 detik lalu pindah ke halaman dashboard
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 1500);
+
+                } else {
+                    // Tampilkan teks merah jika gagal
+                    messageDiv.innerText = result.message || "Username atau password salah!";
+                    messageDiv.className = "mt-4 text-center font-medium text-sm text-red-600";
+                }
+
+            } catch (error) {
+                console.error("Error pada frontend:", error);
+                messageDiv.innerText = "Server backend mati wak! Hidupin dulu node index.js nya.";
+                messageDiv.className = "mt-4 text-center font-medium text-sm text-amber-600";
+            }
+        });
+    </script>
+</body>
+</html>

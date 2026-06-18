@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Toko Penjualan</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="bg-slate-100 font-sans">
+
+    <nav class="bg-blue-600 p-4 text-white flex justify-between items-center shadow-md">
+        <div class="flex items-center space-x-2">
+            <span class="text-xl font-bold tracking-wide">Toko Api Admin</span>
+        </div>
+        <button onclick="logout()"
+            class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm">
+            Logout
+        </button>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+        <h2 class="text-2xl font-bold text-slate-800 mb-6">Selamat Datang di Dashboard Utama</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 flex flex-col justify-between">
+                <div>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Pelanggan</p>
+                    <p id="stat-pelanggan" class="text-4xl font-extrabold text-slate-800 mt-2">0</p>
+                </div>
+                <span class="text-xs text-blue-500 mt-4 font-medium">Data Master Pelanggan</span>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500 flex flex-col justify-between">
+                <div>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Transaksi</p>
+                    <p id="stat-transaksi" class="text-4xl font-extrabold text-slate-800 mt-2">0</p>
+                </div>
+                <span class="text-xs text-green-500 mt-4 font-medium">Data Induk Transaksi</span>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-amber-500 flex flex-col justify-between">
+                <div>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Pendapatan</p>
+                    <p id="stat-pendapatan" class="text-4xl font-extrabold text-slate-800 mt-2">Rp 0</p>
+                </div>
+                <span class="text-xs text-amber-500 mt-4 font-medium">Akumulasi Detail Transaksi</span>
+            </div>
+
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Manajemen Data Pelanggan</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Kelola data master pelanggan toko melalui form api di bawah
+                        ini</p>
+                </div>
+                <button onclick="bukaModalPelanggan()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md shadow-blue-100">
+                    + Tambah Pelanggan
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr
+                            class="bg-slate-50 border-b border-slate-200 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Nama Pelanggan</th>
+                            <th class="p-3">Email</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabel-pelanggan-body" class="text-sm text-slate-700 divide-y divide-slate-100">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Manajemen Data Transaksi -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Manajemen Data Transaksi</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Kelola data transaksi toko, barang, harga, dan subtotal
+                        secara terintegrasi</p>
+                </div>
+                <button onclick="bukaModalTransaksi()"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md shadow-emerald-100">
+                    + Tambah Transaksi
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr
+                            class="bg-slate-50 border-b border-slate-200 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                            <th class="p-3">ID Transaksi</th>
+                            <th class="p-3">Nama Pelanggan</th>
+                            <th class="p-3">Tanggal Transaksi</th>
+                            <th class="p-3">Nama Barang</th>
+                            <th class="p-3">Harga Satuan</th>
+                            <th class="p-3 text-center">Jumlah</th>
+                            <th class="p-3">Subtotal</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabel-transaksi-body" class="text-sm text-slate-700 divide-y divide-slate-100">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Pelanggan -->
+    <div id="modal-pelanggan"
+        class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
+            <h3 class="text-lg font-bold text-slate-800 mb-1">Tambah Pelanggan Baru</h3>
+            <p class="text-xs text-slate-400 mb-4">Pastikan data email berformat valid dan nama tidak kosong</p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Pelanggan</label>
+                    <input type="text" id="input-nama" placeholder="Masukkan nama pelanggan..."
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Email</label>
+                    <input type="email" id="input-email" placeholder="contoh@gmail.com"
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 mt-6">
+                <button onclick="tutupModalPelanggan()"
+                    class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition">
+                    Batal
+                </button>
+                <button onclick="simpanPelanggan()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                    Simpan Data
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Transaksi -->
+    <div id="modal-transaksi"
+        class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
+            <h3 class="text-lg font-bold text-slate-800 mb-1">Tambah Transaksi Baru</h3>
+            <p class="text-xs text-slate-400 mb-4">Pilih pelanggan, tentukan detail barang, harga, dan jumlah beli</p>
+
+            <form id="form-transaksi" onsubmit="simpan(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Pelanggan</label>
+                        <select id="select-pelanggan-transaksi"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                            <option value="">Pelanggan Umum (NULL)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Tanggal Transaksi</label>
+                        <input type="datetime-local" id="input-tanggal-transaksi"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Barang /
+                            Produk</label>
+                        <input type="text" id="input-nama-produk" placeholder="Masukkan nama barang..." required
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Harga Satuan
+                                (Rp)</label>
+                            <input type="number" id="input-harga-produk" placeholder="0" min="0" required
+                                oninput="hitungSubtotal()"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Jumlah Beli</label>
+                            <input type="number" id="input-jumlah-produk" placeholder="0" min="1" required
+                                oninput="hitungSubtotal()"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Subtotal</label>
+                        <input type="text" id="input-subtotal-tampilan" readonly placeholder="Rp 0"
+                            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-100 text-slate-500 focus:outline-none font-semibold">
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-2 mt-6">
+                    <button type="button" onclick="tutupModalTransaksi()"
+                        class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Batal
+                    </button>
+                    <button type="submit"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                        Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // SATPAM FRONT-END: Cek eksistensi token autentikasi di local storage browser
+        const token = localStorage.getItem('admin_token');
+        if (!token) {
+            // Jika token kosong atau tidak terdeteksi, lempar paksa ke login
+            window.location.href = '/login.html';
+        }
+
+        // 1. Ambil Data Statistik Atas secara real-time dari MySQL
+        async function muatStatistik() {
+            try {
+                const response = await fetch('/api/statistik', {
+                    method: 'GET',
+                    headers: { 'Authorization': token }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+
+                    document.getElementById('stat-pelanggan').innerText = data.total_pelanggan || 0;
+                    document.getElementById('stat-transaksi').innerText = data.total_transaksi || 0;
+                    document.getElementById('stat-pendapatan').innerText = 'Rp ' + (data.total_pendapatan || 0).toLocaleString('id-ID');
+                    // ... (setelah baris if (response.ok))
+                } else {
+                    // TAMBAHKAN BARIS INI:
+                    const errorData = await response.json();
+                    alert('Gagal: ' + (errorData.message || 'Terjadi kesalahan sistem'));
+                }
+            } catch (err) {
+                console.error('Gagal memuat data statistik:', err);
+            }
+        }
+
+        // 2. Ambil List Data Pelanggan dan Cetak ke Baris Tabel HTML
+        async function muatDataPelanggan() {
+            try {
+                const response = await fetch('/api/pelanggan', {
+                    method: 'GET',
+                    headers: { 'Authorization': token }
+                });
+                const pelanggan = await response.json();
+
+                if (response.ok) {
+                    const tbody = document.getElementById('tabel-pelanggan-body');
+                    tbody.innerHTML = ''; // Reset tabel agar data tidak menumpuk ganda
+
+                    // Populate select options for transaction creation
+                    const selectPelanggan = document.getElementById('select-pelanggan-transaksi');
+                    if (selectPelanggan) {
+                        selectPelanggan.innerHTML = '<option value="">Pelanggan Umum (NULL)</option>';
+                        pelanggan.forEach(p => {
+                            selectPelanggan.innerHTML += `<option value="${p.id_pelanggan}">${p.nama_pelanggan} (${p.email})</option>`;
+                        });
+                    }
+
+                    if (pelanggan.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada data pelanggan di database.</td></tr>`;
+                        return;
+                    }
+
+                    pelanggan.forEach(p => {
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-slate-50/80 transition">
+                                <td class="p-3 font-semibold text-slate-400">${p.id_pelanggan}</td>
+                                <td class="p-3 font-semibold text-slate-800">${p.nama_pelanggan}</td>
+                                <td class="p-3 text-slate-500">${p.email}</td>
+                                <td class="p-3 text-center">
+                                    <button onclick="hapusPelanggan(${p.id_pelanggan})" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-md text-xs font-bold transition">
+                                        Hapus
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch (err) {
+                console.error('Gagal memuat data pelanggan:', err);
+            }
+        }
+
+        // 3. Kontrol Buka Tutup Jendela Modal Form Pop-up
+        function bukaModalPelanggan() {
+            document.getElementById('modal-pelanggan').classList.remove('hidden');
+        }
+
+        function tutupModalPelanggan() {
+            document.getElementById('modal-pelanggan').classList.add('hidden');
+            document.getElementById('input-nama').value = '';
+            document.getElementById('input-email').value = '';
+        }
+
+        // 4. Kirim Data Pelanggan Baru dari Form Input ke API POST Backend
+        async function simpanPelanggan() {
+            const nama = document.getElementById('input-nama').value.trim();
+            const email = document.getElementById('input-email').value.trim();
+
+            if (!nama || !email) {
+                return alert('Form input tidak boleh kosong ya wak!');
+            }
+
+            try {
+                const response = await fetch('/api/pelanggan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token
+                    },
+                    body: JSON.stringify({ nama_pelanggan: nama, email: email })
+                });
+
+                if (response.ok) {
+                    tutupModalPelanggan();
+                    muatDataPelanggan(); // Perbarui tabel pelanggan langsung
+                    muatStatistik();     // Perbarui counter kartu pelanggan di atas
+                } else {
+                    alert('Gagal menyimpan data pelanggan baru!');
+                }
+            } catch (err) {
+                console.error('Error saat menyimpan pelanggan:', err);
+            }
+        }
+
+        // 5. Fungsi Request Hapus Pelanggan Berdasarkan Parameter ID
+        async function hapusPelanggan(id) {
+            if (!confirm('Apakah kamu yakin ingin menghapus pelanggan ini, Fan?')) return;
+
+            try {
+                const response = await fetch(`/api/pelanggan/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': token }
+                });
+
+                if (response.ok) {
+                    muatDataPelanggan(); // Segarkan tampilan tabel
+                    muatStatistik();     // Segarkan data counter kartu atas
+                    // ... (setelah baris if (response.ok))
+                } else {
+                    // TAMBAHKAN BARIS INI:
+                    const errorData = await response.json();
+                    alert('Gagal: ' + (errorData.message || 'Terjadi kesalahan sistem'));
+                }
+            } catch (err) {
+                console.error('Error saat menghapus pelanggan:', err);
+            }
+        }
+
+        // --- MANAJEMEN DATA TRANSAKSI ---
+
+        // Hitung Subtotal secara dinamis di form modal
+        function hitungSubtotal() {
+            const harga = parseInt(document.getElementById('input-harga-produk').value) || 0;
+            const jumlah = parseInt(document.getElementById('input-jumlah-produk').value) || 0;
+            const subtotal = harga * jumlah;
+            document.getElementById('input-subtotal-tampilan').value = 'Rp ' + subtotal.toLocaleString('id-ID');
+        }
+
+        // Buka Modal Transaksi dan set default date-time ke waktu sekarang
+        function bukaModalTransaksi() {
+            const now = new Date();
+            const offset = now.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
+            document.getElementById('input-tanggal-transaksi').value = localISOTime;
+            document.getElementById('modal-transaksi').classList.remove('hidden');
+        }
+
+        function tutupModalTransaksi() {
+            document.getElementById('modal-transaksi').classList.add('hidden');
+            document.getElementById('select-pelanggan-transaksi').value = '';
+            document.getElementById('input-tanggal-transaksi').value = '';
+            document.getElementById('input-nama-produk').value = '';
+            document.getElementById('input-harga-produk').value = '';
+            document.getElementById('input-jumlah-produk').value = '';
+            document.getElementById('input-subtotal-tampilan').value = 'Rp 0';
+        }
+
+        // A. Fungsi loadData() untuk mengambil data dari backend & render ke tabel
+        async function loadData() {
+            try {
+                const response = await fetch('/api/transaksi');
+                const transaksi = await response.json();
+
+                if (response.ok) {
+                    const tbody = document.getElementById('tabel-transaksi-body');
+                    tbody.innerHTML = '';
+
+                    if (!Array.isArray(transaksi) || transaksi.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">Belum ada data transaksi di database.</td></tr>`;
+                        return;
+                    }
+
+                    transaksi.forEach(t => {
+                        const nama = t.nama_pelanggan ? t.nama_pelanggan : 'Pelanggan Umum';
+                        const tgl = t.tanggal_transaksi ? new Date(t.tanggal_transaksi).toLocaleString('id-ID') : '-';
+                        const namaProduk = t.nama_produk ? t.nama_produk : '-';
+                        const harga = t.harga ? 'Rp ' + t.harga.toLocaleString('id-ID') : '-';
+                        const jumlah = t.jumlah ? t.jumlah : '-';
+                        const subtotal = t.subtotal ? 'Rp ' + t.subtotal.toLocaleString('id-ID') : '-';
+
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-slate-50/80 transition">
+                                <td class="p-3 font-semibold text-slate-400">${t.id_transaksi}</td>
+                                <td class="p-3 font-semibold text-slate-800">${nama}</td>
+                                <td class="p-3 text-slate-500">${tgl}</td>
+                                <td class="p-3 font-medium text-slate-700">${namaProduk}</td>
+                                <td class="p-3 text-slate-600">${harga}</td>
+                                <td class="p-3 text-slate-600 text-center">${jumlah}</td>
+                                <td class="p-3 font-bold text-emerald-600">${subtotal}</td>
+                                <td class="p-3 text-center">
+                                    <button onclick="hapusTransaksi(${t.id_transaksi})" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-md text-xs font-bold transition">
+                                        Hapus
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch (err) {
+                console.error('Gagal memuat data transaksi:', err);
+            }
+        }
+
+        // B. Fungsi simpan(e) untuk menyimpan data transaksi menggunakan async/await
+        async function simpan(e) {
+            if (e) e.preventDefault();
+
+            const idPelanggan = document.getElementById('select-pelanggan-transaksi').value;
+            const tanggalTransaksi = document.getElementById('input-tanggal-transaksi').value;
+            const namaProduk = document.getElementById('input-nama-produk').value.trim();
+            const harga = document.getElementById('input-harga-produk').value;
+            const jumlah = document.getElementById('input-jumlah-produk').value;
+
+            try {
+                const response = await fetch('/api/transaksi', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id_pelanggan: idPelanggan || null,
+                        tanggal_transaksi: tanggalTransaksi || null,
+                        nama_produk: namaProduk,
+                        harga: harga,
+                        jumlah: jumlah
+                    })
+                });
+
+                if (response.ok) {
+                    tutupModalTransaksi();
+                    await loadData();      // Refresh tabel transaksi otomatis tanpa reload halaman
+                    await muatStatistik(); // Refresh counter statistik di atas
+                } else {
+                    alert('Gagal menyimpan data transaksi baru!');
+                }
+            } catch (err) {
+                console.error('Error saat menyimpan transaksi:', err);
+                alert('Terjadi kesalahan koneksi server.');
+            }
+        }
+
+        // C. Fungsi untuk menghapus transaksi
+        async function hapusTransaksi(id) {
+            if (!confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) return;
+
+            try {
+                const response = await fetch(`/api/transaksi/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    await loadData();
+                    await muatStatistik();
+                } else {
+                    alert('Gagal menghapus transaksi dari database!');
+                }
+            } catch (err) {
+                console.error('Error saat menghapus transaksi:', err);
+            }
+        }
+
+        // 6. Fungsi Log Keluar Sistem
+        function logout() {
+            localStorage.removeItem('admin_token'); // Buang token dari browser
+            window.location.href = '/login.html';   // Lempar kembali ke halaman login utama
+        }
+
+        // JALANKAN PROSES PENGAMBILAN DATA KETIKA HALAMAN SELESAI DIMUAT
+        muatStatistik();
+        muatDataPelanggan();
+        loadData();
+    </script>
+</body>
+
+</html>

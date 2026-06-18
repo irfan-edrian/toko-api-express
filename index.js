@@ -1,184 +1,297 @@
+require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2');
-const crypto = require('crypto'); // Bawaan Node.js untuk bikin token acak
+const { Pool } = require('pg');
+const crypto = require('crypto');
+const cors = require('cors');
+const path = require('path');
+
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 8080;
 
+// MIDDLEWARE
+app.use(cors());
 app.use(express.json());
+// Melayani file frontend statis dari folder 'public'
+app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. KONEKSI DATABASE XAMPP
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'toko_transaksi' // Sesuaikan dengan nama database kamu
-});
-
-db.connect((err) => {
-    if (err) {
-        console.error('Database mati wak, hidupin XAMPP dulu!:', err);
-    } else {
-        console.log('Mantap! Berhasil terhubung ke database MySQL XAMPP.');
+// KONEKSI DATABASE POSTGRESQL (NEON)
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // Wajib untuk koneksi SSL Neon
     }
 });
 
-// Penyimpanan token sementara di memori server (Sesuai request: kode tertentu yang dikenali API itu sendiri)
-const activeTokens = new Map(); 
+// Test koneksi database saat start
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('Gagal terhubung ke database Neon PostgreSQL:', err.stack);
+    } else {
+        console.log('Mantap! Berhasil terhubung ke database Neon PostgreSQL.');
+        release();
+    }
+});
+
+// Penyimpanan token login admin sementara di memori server
+const activeTokens = new Map();
 
 // ==========================================
+// 1. ENDPOINT AUTENTIKASI: LOGIN
 // ==========================================
-// 2. ENDPOINT AUTENTIKASI: LOGIN (FIXED)
-// ==========================================
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body; // Ambil data dari body di baris tersendiri
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    console.log("=== ADA INPUTAN LOGIN MASUK ===");
+    console.log("Username:", username);
 
     if (!username || !password) {
         return res.status(400).json({ status: 'error', message: 'Username dan password wajib diisi!' });
     }
 
-    const query = 'SELECT * FROM users WHERE username = ? AND password = ?';
-    db.query(query, [username, password], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+    try {
+        // user adalah keyword khusus di PostgreSQL, jadi harus diberi tanda kutip ganda "user"
+        const query = 'SELECT * FROM "user" WHERE username = $1 AND password = $2';
+        const result = await pool.query(query, [username, password]);
 
-        // Validasi: Jika username & password salah / tidak ditemukan
-        if (results.length === 0) {
-            return res.status(401).json({ 
-                status: 'error', 
-                message: 'Autentikasi gagal! Username atau password salah.' 
+        if (result.rows.length === 0) {
+            console.log("Hasil: Login Gagal, data tidak cocok.");
+            return res.status(401).json({
+                status: 'error',
+                message: 'Autentikasi gagal! Username atau password salah.'
             });
         }
 
-        // Jika benar, generate token acak unik
         const token = crypto.randomBytes(32).toString('hex');
-        
-        // Simpan token ke memori dengan info user
-        activeTokens.set(token, results[0].username);
+        activeTokens.set(token, result.rows[0].username);
 
-        // Response berupa token sesuai instruksi dosen
+        console.log(`Hasil: Login Sukses! Token dibuat untuk user: ${result.rows[0].username}`);
+
         res.json({
             status: 'success',
             message: 'Login berhasil!',
             token: token
         });
-    });
+    } catch (err) {
+        console.error("Error PostgreSQL saat login:", err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ==========================================
-// 3. MIDDLEWARE VALIDASI TOKEN (SATPAM API)
+// 2. MIDDLEWARE VALIDASI TOKEN (SATPAM API)
 // ==========================================
 const verifyToken = (req, res, next) => {
-    // Mengambil token dari header request bernama 'Authorization'
     const token = req.headers['authorization'];
 
     if (!token) {
-        return res.status(401).json({ 
-            status: 'error', 
-            message: 'Akses ditolak! Anda harus menyertakan token autentikasi.' 
-            });
-    }
-
-    // Validasi apakah token terdaftar atau benar
-    if (!activeTokens.has(token)) {
-        return res.status(403).json({ 
-            status: 'error', 
-            message: 'Token salah atau sudah kadaluarsa!' 
+        return res.status(401).json({
+            status: 'error',
+            message: 'Akses ditolak! Anda harus menyertakan token autentikasi.'
         });
     }
 
-    // Jika token benar, lanjut ke rute yang dituju
+    if (!activeTokens.has(token)) {
+        return res.status(403).json({
+            status: 'error',
+            message: 'Token salah atau sudah kadaluarsa!'
+        });
+    }
+
     req.currentUser = activeTokens.get(token);
     next();
 };
 
-// PENTING: Semua rute di bawah ini otomatis dilindungi oleh verifyToken!
-
 // ==========================================
-// 4. CRUD DATA MASTER - PELANGGAN (SECURE)
+// 3. CRUD DATA MASTER - PELANGGAN
 // ==========================================
-app.get('/api/pelanggan', verifyToken, (req, res) => {
-    db.query('SELECT * FROM pelanggan', (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
+app.get('/api/pelanggan', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM pelanggan ORDER BY id_pelanggan ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Gagal get pelanggan:", err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.post('/api/pelanggan', verifyToken, (req, { nama_pelanggan, email }, res) => {
-    db.query('INSERT INTO pelanggan (nama_pelanggan, email) VALUES (?, ?)', [nama_pelanggan, email], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Pelanggan berhasil ditambahkan!', id: results.insertId });
-    });
-});
-
-app.put('/api/pelanggan/:id', verifyToken, (req, res) => {
+app.post('/api/pelanggan', verifyToken, async (req, res) => {
     const { nama_pelanggan, email } = req.body;
-    db.query('UPDATE pelanggan SET nama_pelanggan = ?, email = ? WHERE id_pelanggan = ?', [nama_pelanggan, email, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Data pelanggan berhasil diupdate!' });
-    });
+
+    console.log("=== ADA INPUT TAMBAH PELANGGAN MASUK ===");
+    console.log("Nama:", nama_pelanggan, "| Email:", email);
+
+    if (!nama_pelanggan || !email) {
+        return res.status(400).json({ status: 'error', message: 'Data nama dan email wajib diisi!' });
+    }
+
+    try {
+        const queryInsert = 'INSERT INTO pelanggan (nama_pelanggan, email) VALUES ($1, $2) RETURNING id_pelanggan';
+        const result = await pool.query(queryInsert, [nama_pelanggan, email]);
+        
+        console.log(`Hasil: Sukses menambah pelanggan baru dengan ID ${result.rows[0].id_pelanggan}!`);
+        res.status(201).json({ status: 'success', message: 'Pelanggan baru berhasil disimpan!' });
+    } catch (err) {
+        console.error("Gagal SQL Insert Pelanggan:", err.message);
+        res.status(500).json({ status: 'error', message: err.message });
+    }
 });
 
-app.delete('/api/pelanggan/:id', verifyToken, (req, res) => {
-    db.query('DELETE FROM pelanggan WHERE id_pelanggan = ?', [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Pelanggan berhasil dihapus!' });
-    });
+app.delete('/api/pelanggan/:id', verifyToken, async (req, res) => {
+    const idPelanggan = parseInt(req.params.id);
+    console.log(`=== MENCOBA HAPUS PELANGGAN ID: ${idPelanggan} ===`);
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Cari tahu apakah pelanggan ini punya riwayat di tabel transaksi
+        const resTrans = await client.query('SELECT id_transaksi FROM transaksi WHERE id_pelanggan = $1', [idPelanggan]);
+
+        if (resTrans.rows.length > 0) {
+            const daftarIdTransaksi = resTrans.rows.map(t => t.id_transaksi);
+
+            // Hapus detail_transaksi terlebih dahulu demi memutus foreign key
+            await client.query('DELETE FROM detail_transaksi WHERE id_transaksi = ANY($1::int[])', [daftarIdTransaksi]);
+
+            // Hapus data induk di tabel transaksi
+            await client.query('DELETE FROM transaksi WHERE id_pelanggan = $1', [idPelanggan]);
+        }
+
+        // Hapus data pelanggan utama
+        await client.query('DELETE FROM pelanggan WHERE id_pelanggan = $1', [idPelanggan]);
+
+        await client.query('COMMIT');
+        console.log(`Hasil: Pelanggan ID ${idPelanggan} berhasil dihapus bersih dari database.`);
+        res.json({ status: 'success', message: 'Data pelanggan berhasil dihapus total!' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Gagal menghapus pelanggan:", err.message);
+        res.status(500).json({ status: 'error', message: err.message });
+    } finally {
+        client.release();
+    }
 });
 
 // ==========================================
-// 5. CRUD DATA TRANSAKSIONAL (SECURE)
+// 4. CRUD DATA TRANSAKSIONAL
 // ==========================================
-app.get('/api/transaksi', verifyToken, (req, res) => {
+app.get('/api/transaksi', async (req, res) => {
     const query = `
-        SELECT t.id_transaksi, p.nama_pelanggan, t.tgl_transaksi, pr.nama_produk, dt.jumlah, dt.subtotal 
+        SELECT 
+            t.id_transaksi, 
+            t.id_pelanggan, 
+            p.nama_pelanggan, 
+            t.tanggal_transaksi, 
+            dt.nama_produk, 
+            dt.harga, 
+            dt.jumlah, 
+            dt.subtotal
         FROM transaksi t
-        JOIN pelanggan p ON t.id_pelanggan = p.id_pelanggan
-        JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
-        JOIN produk pr ON dt.id_produk = pr.id_produk
+        LEFT JOIN pelanggan p ON t.id_pelanggan = p.id_pelanggan
+        LEFT JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
+        ORDER BY t.id_transaksi DESC
     `;
-    db.query(query, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
-    });
+    try {
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Gagal get transaksi:", err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.post('/api/transaksi', verifyToken, (req, { id_pelanggan, tgl_transaksi }, res) => {
-    db.query('INSERT INTO transaksi (id_pelanggan, tgl_transaksi) VALUES (?, ?)', [id_pelanggan, tgl_transaksi], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Induk Transaksi sukses dibuat!', id_transaksi: results.insertId });
-    });
+app.post('/api/transaksi', async (req, res) => {
+    let { id_pelanggan, tanggal_transaksi, nama_produk, harga, jumlah } = req.body;
+
+    if (id_pelanggan === '' || id_pelanggan === null || id_pelanggan === undefined || id_pelanggan === 'null' || id_pelanggan === 'NULL') {
+        id_pelanggan = null;
+    } else {
+        id_pelanggan = parseInt(id_pelanggan);
+    }
+
+    if (!tanggal_transaksi) {
+        tanggal_transaksi = new Date();
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const insertTransQuery = 'INSERT INTO transaksi (id_pelanggan, tanggal_transaksi) VALUES ($1, $2) RETURNING id_transaksi';
+        const resTrans = await client.query(insertTransQuery, [id_pelanggan, tanggal_transaksi]);
+        const id_transaksi = resTrans.rows[0].id_transaksi;
+
+        if (nama_produk) {
+            const itemHarga = parseInt(harga) || 0;
+            const itemJumlah = parseInt(jumlah) || 0;
+            const subtotal = itemHarga * itemJumlah;
+
+            const insertDetailQuery = 'INSERT INTO detail_transaksi (id_transaksi, nama_produk, harga, jumlah, subtotal) VALUES ($1, $2, $3, $4, $5)';
+            await client.query(insertDetailQuery, [id_transaksi, nama_produk, itemHarga, itemJumlah, subtotal]);
+        }
+
+        await client.query('COMMIT');
+        res.status(201).json({
+            status: 'success',
+            message: 'Transaksi dan detail berhasil disimpan!',
+            id_transaksi: id_transaksi
+        });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Gagal insert transaksi:", err.message);
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
 });
 
-app.put('/api/transaksi/:id', verifyToken, (req, res) => {
-    const { id_pelanggan, tgl_transaksi } = req.body;
-    db.query('UPDATE transaksi SET id_pelanggan = ?, tgl_transaksi = ? WHERE id_transaksi = ?', [id_pelanggan, tgl_transaksi, req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Transaksi berhasil diupdate!' });
-    });
-});
-
-app.delete('/api/transaksi/:id', verifyToken, (req, res) => {
-    db.query('DELETE FROM transaksi WHERE id_transaksi = ?', [req.params.id], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Transaksi berhasil dihapus!' });
-    });
+app.delete('/api/transaksi/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM detail_transaksi WHERE id_transaksi = $1', [id]);
+        await client.query('DELETE FROM transaksi WHERE id_transaksi = $1', [id]);
+        await client.query('COMMIT');
+        res.json({ status: 'success', message: 'Transaksi berhasil dihapus!' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Gagal hapus transaksi:", err.message);
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
 });
 
 // ==========================================
-// 6. STATISTIK DATA TRANSAKSIONAL (SECURE)
+// 5. STATISTIK DATA TRANSAKSIONAL
 // ==========================================
-app.get('/api/statistik', verifyToken, (req, res) => {
+app.get('/api/statistik', verifyToken, async (req, res) => {
     const query = `
         SELECT 
             (SELECT COUNT(*) FROM pelanggan) AS total_pelanggan,
             (SELECT COUNT(*) FROM transaksi) AS total_transaksi,
-            (SELECT SUM(subtotal) FROM detail_transaksi) AS total_pendapatan
+            (SELECT COALESCE(SUM(subtotal), 0) FROM detail_transaksi) AS total_pendapatan
     `;
-    db.query(query, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results[0]);
-    });
+    try {
+        const result = await pool.query(query);
+        const row = result.rows[0];
+        res.json({
+            total_pelanggan: parseInt(row.total_pelanggan) || 0,
+            total_transaksi: parseInt(row.total_transaksi) || 0,
+            total_pendapatan: parseInt(row.total_pendapatan) || 0
+        });
+    } catch (err) {
+        console.error("Gagal get statistik:", err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.listen(port, () => {
-    console.log(`Server jalan aman di http://localhost:${port}`);
+// Route utama untuk load dashboard
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.listen(port, '0.0.0.0', () => {
+    console.log(`🚀 Server jalan aman di port ${port}`);
 });
