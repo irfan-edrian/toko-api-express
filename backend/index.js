@@ -293,11 +293,34 @@ app.post('/api/produk', verifyToken, async (req, res) => {
     }
 
     try {
-        const queryInsert = 'INSERT INTO produk (nama_produk, harga, stok) VALUES ($1, $2, $3) RETURNING id_produk';
-        const result = await pool.query(queryInsert, [nama_produk, parseInt(harga), parseInt(stok)]);
-        res.status(201).json({ status: 'success', message: 'Produk baru berhasil disimpan!', id_produk: result.rows[0].id_produk });
+        // Cek apakah produk dengan nama yang sama persis (case-insensitive) sudah ada
+        const checkQuery = 'SELECT id_produk, stok FROM produk WHERE LOWER(nama_produk) = LOWER($1)';
+        const checkResult = await pool.query(checkQuery, [nama_produk]);
+
+        if (checkResult.rows.length > 0) {
+            // Produk sudah ada, cukup tambahkan stoknya
+            const existingProduct = checkResult.rows[0];
+            const updateQuery = 'UPDATE produk SET stok = stok + $1, harga = $2 WHERE id_produk = $3 RETURNING id_produk';
+            const result = await pool.query(updateQuery, [parseInt(stok), parseInt(harga), existingProduct.id_produk]);
+            
+            res.status(200).json({ 
+                status: 'success', 
+                message: 'Produk sudah ada, stok berhasil ditambahkan!', 
+                id_produk: result.rows[0].id_produk 
+            });
+        } else {
+            // Produk belum ada, buat baru
+            const queryInsert = 'INSERT INTO produk (nama_produk, harga, stok) VALUES ($1, $2, $3) RETURNING id_produk';
+            const result = await pool.query(queryInsert, [nama_produk, parseInt(harga), parseInt(stok)]);
+            
+            res.status(201).json({ 
+                status: 'success', 
+                message: 'Produk baru berhasil disimpan!', 
+                id_produk: result.rows[0].id_produk 
+            });
+        }
     } catch (err) {
-        console.error("Gagal SQL Insert Produk:", err);
+        console.error("Gagal SQL Insert/Update Produk:", err);
         res.status(500).json({ status: 'error', message: err.message || err.toString() });
     }
 });
