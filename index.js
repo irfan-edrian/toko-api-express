@@ -79,8 +79,8 @@ app.post('/api/login', async (req, res) => {
             token: token
         });
     } catch (err) {
-        console.error("Error PostgreSQL saat login:", err.message);
-        res.status(500).json({ error: err.message });
+        console.error("Error PostgreSQL saat login:", err);
+        res.status(500).json({ error: err.message || err.toString() });
     }
 });
 
@@ -202,8 +202,8 @@ app.get('/api/transaksi', async (req, res) => {
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (err) {
-        console.error("Gagal get transaksi:", err.message);
-        res.status(500).json({ error: err.message });
+        console.error("Gagal get transaksi:", err);
+        res.status(500).json({ error: err.message || err.toString() });
     }
 });
 
