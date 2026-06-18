@@ -1,53 +1,264 @@
 {
 	"info": {
-		"name": "API Toko Transaksi Penjualan - Muhammad Irfan Edrian",
+		"name": "API Toko Transaksi Penjualan - Lengkap",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "Data Master - Get All Pelanggan",
-			"request": {
-				"method": "GET",
-				"url": { "raw": "http://localhost:3000/api/pelanggan" }
-			}
+			"name": "Autentikasi",
+			"item": [
+				{
+					"name": "Autentikasi - Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"irfan\",\n    \"password\": \"123\"\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/login" }
+					}
+				}
+			]
 		},
 		{
-			"name": "Data Master - Create Pelanggan",
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Content-Type", "value": "application/json" }],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"nama_pelanggan\": \"Irfan Baru\",\n    \"email\": \"irfan@express.com\"\n}"
+			"name": "Pelanggan",
+			"item": [
+				{
+					"name": "Pelanggan - Get All",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/pelanggan" }
+					}
 				},
-				"url": { "raw": "http://localhost:3000/api/pelanggan" }
-			}
-		},
-		{
-			"name": "Data Transaksional - Get All Transaksi",
-			"request": {
-				"method": "GET",
-				"url": { "raw": "http://localhost:3000/api/transaksi" }
-			}
-		},
-		{
-			"name": "Data Transaksional - Create Transaksi Baru",
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Content-Type", "value": "application/json" }],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"id_pelanggan\": 1,\n    \"id_produk\": 2,\n    \"jumlah\": 2,\n    \"subtotal\": 120000\n}"
+				{
+					"name": "Pelanggan - Create",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nama_pelanggan\": \"Irfan Baru\",\n    \"email\": \"irfan@express.com\"\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/pelanggan" }
+					}
 				},
-				"url": { "raw": "http://localhost:3000/api/transaksi" }
-			}
+				{
+					"name": "Pelanggan - Update (By ID in URL)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nama_pelanggan\": \"Irfan Updated\",\n    \"email\": \"irfan_updated@express.com\"\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/pelanggan/1" }
+					}
+				},
+				{
+					"name": "Pelanggan - Update (By ID in Body)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": 1,\n    \"nama_pelanggan\": \"Irfan Updated\",\n    \"email\": \"irfan_updated@express.com\"\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/pelanggan" }
+					}
+				},
+				{
+					"name": "Pelanggan - Delete (By ID in URL)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/pelanggan/1" }
+					}
+				},
+				{
+					"name": "Pelanggan - Delete (By ID in Body)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": 1\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/pelanggan" }
+					}
+				}
+			]
 		},
 		{
-			"name": "Statistik - Get Data Ringkasan",
-			"request": {
-				"method": "GET",
-				"url": { "raw": "http://localhost:3000/api/statistik" }
-			}
+			"name": "Produk",
+			"item": [
+				{
+					"name": "Produk - Get All",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/produk" }
+					}
+				},
+				{
+					"name": "Produk - Create",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nama_produk\": \"Sapu\",\n    \"harga\": 15000,\n    \"stok\": 12\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/produk" }
+					}
+				},
+				{
+					"name": "Produk - Delete (By ID in URL)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/produk/1" }
+					}
+				}
+			]
+		},
+		{
+			"name": "Transaksi",
+			"item": [
+				{
+					"name": "Transaksi - Get All",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/transaksi" }
+					}
+				},
+				{
+					"name": "Transaksi - Create",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_pelanggan\": 1,\n    \"id_produk\": 1,\n    \"jumlah\": 2,\n    \"harga\": 15000000\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/transaksi" }
+					}
+				},
+				{
+					"name": "Transaksi - Update (By ID in URL)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_pelanggan\": 1,\n    \"id_produk\": 2,\n    \"jumlah\": 1\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/transaksi/1" }
+					}
+				},
+				{
+					"name": "Transaksi - Update (By ID in Body)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_transaksi\": 1,\n    \"id_pelanggan\": 1,\n    \"id_produk\": 2,\n    \"jumlah\": 1\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/transaksi" }
+					}
+				},
+				{
+					"name": "Transaksi - Delete (By ID in URL)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/transaksi/1" }
+					}
+				},
+				{
+					"name": "Transaksi - Delete (By ID in Body)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_transaksi\": 1\n}"
+						},
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/transaksi" }
+					}
+				}
+			]
+		},
+		{
+			"name": "Statistik",
+			"item": [
+				{
+					"name": "Statistik - Get Data Ringkasan",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "TokenAndaDisini" }
+						],
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/api/statistik" }
+					}
+				}
+			]
+		},
+		{
+			"name": "Root",
+			"item": [
+				{
+					"name": "Root - Cek Status",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "https://toko-api-express-41u1.vercel.app/" }
+					}
+				}
+			]
 		}
 	]
 }
