@@ -27,7 +27,7 @@ const Navbar = () => {
   return (
     <nav className="bg-slate-900/80 backdrop-blur-md shadow-lg p-4 flex justify-between items-center border-b border-slate-800 sticky top-0 z-40">
       <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-        Toko API Dashboard
+        transaksi toko irfan
       </h1>
       <div className="flex gap-4 items-center">
         {user ? (
