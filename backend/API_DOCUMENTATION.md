@@ -25,6 +25,8 @@ Saat ini, Anda memiliki total **18 endpoint** yang aktif dan terdefinisi di dala
   **Fungsi:** Mengambil (membaca) daftar seluruh data produk.
 - **`POST /api/produk`**
   **Fungsi:** Menambahkan produk baru. **(Update Terbaru):** Jika nama produk sudah ada, sistem hanya akan menambahkan `stok` dan mengupdate `harga` tanpa membuat data ganda.
+- **`PUT /api/produk/:id`**
+  **Fungsi:** Mengubah data produk tertentu berdasarkan ID di URL.
 - **`DELETE /api/produk/:id`**
   **Fungsi:** Menghapus data produk tertentu berdasarkan ID di URL.
 

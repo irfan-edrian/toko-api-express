@@ -349,6 +349,24 @@ app.delete('/api/produk/:id', verifyToken, async (req, res) => {
     }
 });
 
+app.put('/api/produk/:id', verifyToken, async (req, res) => {
+    const id = parseInt(req.params.id);
+    const { nama_produk, harga_beli, harga, stok } = req.body;
+
+    if (!nama_produk || harga === undefined || stok === undefined || harga_beli === undefined) {
+        return res.status(400).json({ status: 'error', message: 'Data nama, harga beli, harga jual, dan stok wajib diisi!' });
+    }
+
+    try {
+        const queryUpdate = 'UPDATE produk SET nama_produk = $1, harga = $2, stok = $3 WHERE id_produk = $4';
+        await pool.query(queryUpdate, [nama_produk, parseInt(harga), parseInt(stok), id]);
+        res.json({ status: 'success', message: 'Data produk berhasil diperbarui!' });
+    } catch (err) {
+        console.error("Gagal update produk:", err);
+        res.status(500).json({ status: 'error', message: err.message || err.toString() });
+    }
+});
+
 // ==========================================
 // 4. CRUD DATA TRANSAKSIONAL
 // ==========================================

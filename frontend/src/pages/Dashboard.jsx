@@ -21,6 +21,11 @@ const Dashboard = () => {
     id_pelanggan: '', tanggal_transaksi: '', id_produk: '', harga: '', jumlah: ''
   });
 
+  // Edit States
+  const [editIdPelanggan, setEditIdPelanggan] = useState(null);
+  const [editIdProduk, setEditIdProduk] = useState(null);
+  const [editIdTransaksi, setEditIdTransaksi] = useState(null);
+
   const getToken = () => {
     const userData = localStorage.getItem('user');
     return userData ? JSON.parse(userData).token : null;
@@ -72,16 +77,25 @@ const Dashboard = () => {
   const handleSimpanPelanggan = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_URL}/pelanggan`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': getToken() },
+      const url = editIdPelanggan ? `${API_URL}/pelanggan/${editIdPelanggan}` : `${API_URL}/pelanggan`;
+      const method = editIdPelanggan ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method, headers: { 'Content-Type': 'application/json', 'Authorization': getToken() },
         body: JSON.stringify(formPelanggan)
       });
       if (res.ok) {
         setShowModalPelanggan(false);
         setFormPelanggan({ nama_pelanggan: '', email: '' });
+        setEditIdPelanggan(null);
         fetchPelanggan(); fetchStatistik();
       }
     } catch (e) { console.error(e); }
+  };
+
+  const openEditPelanggan = (p) => {
+    setEditIdPelanggan(p.id_pelanggan);
+    setFormPelanggan({ nama_pelanggan: p.nama_pelanggan, email: p.email });
+    setShowModalPelanggan(true);
   };
 
   const handleHapusPelanggan = async (id) => {
@@ -96,16 +110,25 @@ const Dashboard = () => {
   const handleSimpanProduk = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_URL}/produk`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': getToken() },
+      const url = editIdProduk ? `${API_URL}/produk/${editIdProduk}` : `${API_URL}/produk`;
+      const method = editIdProduk ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method, headers: { 'Content-Type': 'application/json', 'Authorization': getToken() },
         body: JSON.stringify(formProduk)
       });
       if (res.ok) {
         setShowModalProduk(false);
         setFormProduk({ nama_produk: '', harga_beli: '', harga: '', stok: '' });
+        setEditIdProduk(null);
         fetchProduk();
       }
     } catch (e) { console.error(e); }
+  };
+
+  const openEditProduk = (p) => {
+    setEditIdProduk(p.id_produk);
+    setFormProduk({ nama_produk: p.nama_produk, harga_beli: p.harga || '', harga: p.harga, stok: p.stok });
+    setShowModalProduk(true);
   };
 
   const handleHapusProduk = async (id) => {
@@ -131,15 +154,37 @@ const Dashboard = () => {
         id_pelanggan: formTransaksi.id_pelanggan || null,
         id_produk: formTransaksi.id_produk ? parseInt(formTransaksi.id_produk) : null,
       };
-      const res = await fetch(`${API_URL}/transaksi`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      const url = editIdTransaksi ? `${API_URL}/transaksi/${editIdTransaksi}` : `${API_URL}/transaksi`;
+      const method = editIdTransaksi ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       if (res.ok) {
         setShowModalTransaksi(false);
         setFormTransaksi({ id_pelanggan: '', tanggal_transaksi: '', id_produk: '', harga: '', jumlah: '' });
+        setEditIdTransaksi(null);
         loadSemuaData();
       }
     } catch (e) { console.error(e); }
+  };
+
+  const openEditTransaksi = (t) => {
+    setEditIdTransaksi(t.id_transaksi);
+    const matchingProduk = produk.find(p => p.nama_produk === t.nama_produk);
+    let formattedDate = '';
+    if (t.tanggal_transaksi) {
+        const d = new Date(t.tanggal_transaksi);
+        const offset = d.getTimezoneOffset() * 60000;
+        formattedDate = (new Date(d - offset)).toISOString().slice(0, 16);
+    }
+    setFormTransaksi({
+      id_pelanggan: t.id_pelanggan || '',
+      tanggal_transaksi: formattedDate,
+      id_produk: matchingProduk ? matchingProduk.id_produk : '',
+      harga: t.harga || '',
+      jumlah: t.jumlah || ''
+    });
+    setShowModalTransaksi(true);
   };
 
   const handleHapusTransaksi = async (id) => {
@@ -224,7 +269,11 @@ const Dashboard = () => {
             </h3>
             <p className="text-sm text-slate-400 mt-1">Kelola direktori pelanggan toko Anda</p>
           </div>
-          <button onClick={() => setShowModalPelanggan(true)} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-900/50 transform hover:-translate-y-0.5">
+          <button onClick={() => {
+            setEditIdPelanggan(null);
+            setFormPelanggan({ nama_pelanggan: '', email: '' });
+            setShowModalPelanggan(true);
+          }} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-900/50 transform hover:-translate-y-0.5">
             + Tambah
           </button>
         </div>
@@ -245,6 +294,7 @@ const Dashboard = () => {
                   <td className="p-4 font-medium text-slate-200">{p.nama_pelanggan}</td>
                   <td className="p-4 text-slate-400">{p.email}</td>
                   <td className="p-4 text-center">
+                    <button onClick={() => openEditPelanggan(p)} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-lg text-xs font-bold transition mr-2">Edit</button>
                     <button onClick={() => handleHapusPelanggan(p.id_pelanggan)} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-1.5 rounded-lg text-xs font-bold transition">Hapus</button>
                   </td>
                 </tr>
@@ -264,7 +314,11 @@ const Dashboard = () => {
             </h3>
             <p className="text-sm text-slate-400 mt-1">Kelola inventory dan harga barang</p>
           </div>
-          <button onClick={() => setShowModalProduk(true)} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-900/50 transform hover:-translate-y-0.5">
+          <button onClick={() => {
+            setEditIdProduk(null);
+            setFormProduk({ nama_produk: '', harga_beli: '', harga: '', stok: '' });
+            setShowModalProduk(true);
+          }} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-900/50 transform hover:-translate-y-0.5">
             + Tambah
           </button>
         </div>
@@ -287,6 +341,7 @@ const Dashboard = () => {
                   <td className="p-4 font-bold text-emerald-400">Rp {p.harga.toLocaleString('id-ID')}</td>
                   <td className="p-4 text-slate-400"><span className="bg-slate-800 px-2 py-1 rounded text-xs border border-slate-700">{p.stok} pcs</span></td>
                   <td className="p-4 text-center">
+                    <button onClick={() => openEditProduk(p)} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-lg text-xs font-bold transition mr-2">Edit</button>
                     <button onClick={() => handleHapusProduk(p.id_produk)} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-1.5 rounded-lg text-xs font-bold transition">Hapus</button>
                   </td>
                 </tr>
@@ -307,9 +362,10 @@ const Dashboard = () => {
             <p className="text-sm text-slate-400 mt-1">Kelola data penjualan dan pesanan</p>
           </div>
           <button onClick={() => {
+            setEditIdTransaksi(null);
             const now = new Date();
             const offset = now.getTimezoneOffset() * 60000;
-            setFormTransaksi({...formTransaksi, tanggal_transaksi: (new Date(now - offset)).toISOString().slice(0, 16)});
+            setFormTransaksi({ id_pelanggan: '', id_produk: '', harga: '', jumlah: '', tanggal_transaksi: (new Date(now - offset)).toISOString().slice(0, 16)});
             setShowModalTransaksi(true);
           }} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-900/50 transform hover:-translate-y-0.5">
             + Tambah
@@ -340,6 +396,7 @@ const Dashboard = () => {
                   <td className="p-4 text-center"><span className="bg-slate-800 px-2 py-1 rounded text-xs border border-slate-700">{t.jumlah || '-'}</span></td>
                   <td className="p-4 font-bold text-amber-400">{t.subtotal ? `Rp ${t.subtotal.toLocaleString('id-ID')}` : '-'}</td>
                   <td className="p-4 text-center">
+                    <button onClick={() => openEditTransaksi(t)} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-lg text-xs font-bold transition mr-2">Edit</button>
                     <button onClick={() => handleHapusTransaksi(t.id_transaksi)} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-1.5 rounded-lg text-xs font-bold transition">Hapus</button>
                   </td>
                 </tr>
@@ -353,8 +410,8 @@ const Dashboard = () => {
       {showModalPelanggan && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl w-full max-w-md">
-            <h3 className="text-xl font-bold text-slate-100 mb-1">Tambah Pelanggan Baru</h3>
-            <p className="text-sm text-slate-400 mb-6">Masukkan identitas pelanggan yang valid.</p>
+            <h3 className="text-xl font-bold text-slate-100 mb-1">{editIdPelanggan ? 'Edit Pelanggan' : 'Tambah Pelanggan Baru'}</h3>
+            <p className="text-sm text-slate-400 mb-6">{editIdPelanggan ? 'Perbarui informasi pelanggan.' : 'Masukkan identitas pelanggan yang valid.'}</p>
             <form onSubmit={handleSimpanPelanggan} className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-2">Nama Pelanggan</label>
@@ -376,8 +433,8 @@ const Dashboard = () => {
       {showModalProduk && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl w-full max-w-md">
-            <h3 className="text-xl font-bold text-slate-100 mb-1">Tambah Produk Baru</h3>
-            <p className="text-sm text-slate-400 mb-6">Tambahkan barang ke katalog inventory.</p>
+            <h3 className="text-xl font-bold text-slate-100 mb-1">{editIdProduk ? 'Edit Produk' : 'Tambah Produk Baru'}</h3>
+            <p className="text-sm text-slate-400 mb-6">{editIdProduk ? 'Perbarui informasi produk dan harga.' : 'Tambahkan barang ke katalog inventory.'}</p>
             <form onSubmit={handleSimpanProduk} className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-2">Nama Produk</label>
@@ -409,8 +466,8 @@ const Dashboard = () => {
       {showModalTransaksi && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl w-full max-w-md">
-            <h3 className="text-xl font-bold text-slate-100 mb-1">Catat Transaksi Baru</h3>
-            <p className="text-sm text-slate-400 mb-6">Pilih pelanggan, produk, dan kuantitas pesanan.</p>
+            <h3 className="text-xl font-bold text-slate-100 mb-1">{editIdTransaksi ? 'Edit Transaksi' : 'Catat Transaksi Baru'}</h3>
+            <p className="text-sm text-slate-400 mb-6">{editIdTransaksi ? 'Perbarui data transaksi.' : 'Pilih pelanggan, produk, dan kuantitas pesanan.'}</p>
             <form onSubmit={handleSimpanTransaksi} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-2">Pelanggan</label>
