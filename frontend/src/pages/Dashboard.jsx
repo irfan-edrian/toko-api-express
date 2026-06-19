@@ -207,7 +207,7 @@ const Dashboard = () => {
   return (
     <div className="animate-in fade-in duration-500 pb-12">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-slate-50 tracking-tight">dashboard utama</h2>
+        <h2 className="text-3xl font-bold text-slate-50 tracking-tight">halaman depan</h2>
         <p className="text-slate-400 mt-1">Cara kerja struktur manajemen transaksi toko.</p>
       </div>
 
